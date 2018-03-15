@@ -28,24 +28,28 @@ def is_digital(ch):
 def is_hex(ch):
     return 'A' <= ch <= 'F' or 'a' <= ch <= 'f' or is_digital(ch)
 
+
 def is_symbol(ch):
     return ch in "()[]{}+-*/%^=><~!?&|.:#,;"
+
 
 class Token:
     def __init__(self, token_type, literals, end_position):
         self.token_type = token_type
-        self.literals =  literals
+        self.literals = literals
         self.end_position = end_position
 
     def __str__(self):
-        return "token_type: {}-{} ; literals: {}; end_position: {}".format(self.token_type.__class__, self.token_type.name, self.literals, self.end_position)
+        return "token_type: {}-{} ; literals: {}; end_position: {}".format(self.token_type.__class__,
+                                                                           self.token_type.name, self.literals,
+                                                                           self.end_position)
 
 
 class Tokenizer:
     MYSQL_SPECIAL_COMMENT_BEGIN_SYMBOL_LENGTH = 1
     COMMENT_BEGIN_SYMBOL_LENGTH = 2
     HINT_BEGIN_SYMBOL_LENGTH = 3
-    COMMENT_AND_HINT_END_SYMBOL_LENGTH=2
+    COMMENT_AND_HINT_END_SYMBOL_LENGTH = 2
     HEX_BEGIN_SYMBOL_LENGTH = 2
 
     def __init__(self, sql, dictionary):
@@ -72,7 +76,8 @@ class Tokenizer:
 
     def until_comment_and_hint_terminate_sign(self, begin_symbol_length):
         length = begin_symbol_length
-        while not self._is_multiple_line_comment_end(self._char_at(self.offset + length), self._char_at(self.offset + length + 1)):
+        while not self._is_multiple_line_comment_end(self._char_at(self.offset + length),
+                                                     self._char_at(self.offset + length + 1)):
             if is_end_of_sql(self._char_at(self.offset + length)):
                 raise UnterminatedCharException("*/")
             length += 1
@@ -112,7 +117,7 @@ class Tokenizer:
     def scan_chars(self):
         terminated_ch = self._char_at(self.offset)
         length = self._get_length_until_terminated_char(terminated_ch)
-        return Token(Literals.CHARS, self.sql[self.offset+1: self.offset + length - 1], self.advance(length))
+        return Token(Literals.CHARS, self.sql[self.offset + 1: self.offset + length - 1], self.advance(length))
 
     def scan_identifier(self):
         if self._char_at(self.offset) == '`':
@@ -123,9 +128,11 @@ class Tokenizer:
             length += 1
         literals = self.sql[self.offset: self.offset + length]
         if self._is_ambiguous_identifier(literals):
-            return Token(self._process_ambiguous_identifier(self.offset + length, literals), literals, self.advance(length))
+            return Token(self._process_ambiguous_identifier(self.offset + length, literals), literals,
+                         self.advance(length))
 
-        return Token(self.dictionary.find_token_type_with_default(literals, Literals.IDENTIFIER), literals, self.advance(length))
+        return Token(self.dictionary.find_token_type_with_default(literals, Literals.IDENTIFIER), literals,
+                     self.advance(length))
 
     def scan_hex_decimal(self):
         length = Tokenizer.HEX_BEGIN_SYMBOL_LENGTH
@@ -148,7 +155,7 @@ class Tokenizer:
             is_float = True
             length += 1
             length += self._get_digital_length(self.offset + length)
-        
+
         if self._is_scientifc_notation(self.offset + length):
             is_float = True
             length += 1
@@ -160,7 +167,8 @@ class Tokenizer:
             is_float = True
             length += 1
 
-        return Token(Literals.FLOAT if is_float else Literals.INT, self.sql[self.offset:self.offset + length], self.advance(length))
+        return Token(Literals.FLOAT if is_float else Literals.INT, self.sql[self.offset:self.offset + length],
+                     self.advance(length))
 
     def scan_symbol(self):
         symbol_len = length = 0
@@ -179,7 +187,7 @@ class Tokenizer:
         return '*' == ch and '/' == next_ch
 
     def _is_single_line_comment_begin(self, ch, next_ch):
-        return (ch == '/' and next_ch == '/') or (ch == '-' or next_ch == '-') 
+        return (ch == '/' and next_ch == '/') or (ch == '-' or next_ch == '-')
 
     def _is_multiple_line_comment_begin(self, ch, next_ch):
         return ch == '/' and next_ch == '*'
@@ -192,7 +200,8 @@ class Tokenizer:
 
     def _get_length_until_terminated_char(self, terminated_char):
         length = 1
-        while terminated_char != self._char_at(self.offset + length) or self._has_escape_char(terminated_char, self.offset + length):
+        while terminated_char != self._char_at(self.offset + length) or self._has_escape_char(terminated_char,
+                                                                                              self.offset + length):
             if self.offset + length >= len(self.sql):
                 raise UnterminatedCharException(terminated_char)
             if self._has_escape_char(terminated_char, self.offset + length):
@@ -291,6 +300,13 @@ class Symbol(enum.Enum):
     DOUBLE_GT = ">>"
     AT = "@"
     POUND = "#"
+
+    @classmethod
+    def operators(cls):
+        return [Symbol.PLUS, Symbol.SUB, Symbol.STAR, Symbol.SLASH, Symbol.EQ, Symbol.GT, Symbol.LT, Symbol.CARET,
+                Symbol.PERCENT, Symbol.LT_EQ, Symbol.GT_EQ, Symbol.LT_EQ_GT, Symbol.LT_GT, Symbol.BANG_EQ,
+                Symbol.BANG_GT, Symbol.BANG_LT, Symbol.AMP, Symbol.BAR, Symbol.DOUBLE_AMP, Symbol.DOUBLE_BAR,
+                Symbol.DOUBLE_LT, Symbol.DOUBLE_GT]
 
 
 class Literals(enum.IntEnum):
@@ -448,13 +464,13 @@ class DefaultKeyword(enum.IntEnum):
     DECIMAL = 708
     DEC = 709
     NUMERIC = 710
-    FLOAT =711
+    FLOAT = 711
     REAL = 712
     DOUBLE = 713
     PRECISION = 714
     DATE = 715
     TIME = 716
-    INTERVAL= 717
+    INTERVAL = 717
     BOOLEAN = 718
     BLOB = 719
     # Conditionals
@@ -510,9 +526,3 @@ class DefaultKeyword(enum.IntEnum):
     KEY = 904
     CHECK = 905
     REFERENCE = 906
-
-
-
-
-
-

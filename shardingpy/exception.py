@@ -18,3 +18,6 @@ class SQLParsingUnsupportedException(ShardingJdbcException):
     def __init__(self, token_type):
         super().__init__("Not supported token {}".format(token_type))
 
+
+class UnsupportedOperationException(ShardingJdbcException):
+    pass

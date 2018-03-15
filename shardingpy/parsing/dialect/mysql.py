@@ -1,5 +1,6 @@
 import enum
-from ..lexer import Lexer
+from shardingpy.parsing.lexer import Lexer
+from shardingpy.parsing.token import Dictionary
 
 
 class MySQLLexer(Lexer):

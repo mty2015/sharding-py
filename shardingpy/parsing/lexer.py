@@ -4,12 +4,13 @@ Lexer
 from ..constant import DatabaseType
 from .token import *
 from .dialect.mysql import *
-from ..exception import SQLParsingException, SQLParsingException, SQLParsingUnsupportedException
+from ..exception import SQLParsingException, SQLParsingException, SQLParsingUnsupportedException, \
+    UnsupportedOperationException
 
 
 class Lexer:
     def __init__(self, sql, dictionary):
-        self.sql = sql 
+        self.sql = sql
         self.dictionary = dictionary
         self.offset = 0
         self.current_token = None
@@ -48,7 +49,7 @@ class Lexer:
 
     def is_comment_begin(self):
         ch = self.get_current_char(0)
-        next_ch= self.get_current_char(1)
+        next_ch = self.get_current_char(1)
         return (ch == '/' and next_ch == '/') or (ch == '-' and next_ch == '-') or (ch == '/' and next_ch == '*')
 
     def _skip_ignored_token(self):
@@ -79,7 +80,11 @@ class Lexer:
         return self.get_current_char(0) == '0' and self.get_current_char(1) == 'x'
 
     def _is_number_begin(self):
-        return is_digital(self.get_current_char(0)) or ((self.get_current_char(0) == '.' and is_digital(self.get_current_char(1)) and not self._is_identifier_begin_with_char(self.get_current_char(-1))) or (self.get_current_char(0) == '-' and (self.get_current_char(1) == '.' or is_digital(self.get_current_char(1)))))
+        return is_digital(self.get_current_char(0)) or ((self.get_current_char(0) == '.' and is_digital(
+            self.get_current_char(1)) and not self._is_identifier_begin_with_char(self.get_current_char(-1))) or (
+                                                            self.get_current_char(0) == '-' and (
+                                                                self.get_current_char(1) == '.' or is_digital(
+                                                                    self.get_current_char(1)))))
 
     def _is_symbol_begin(self):
         return is_symbol(self.get_current_char(0))
@@ -117,9 +122,10 @@ class LexerEngine:
             self.lexer.next_token()
             current_token = self.lexer.get_current_token()
             while True:
-                if equal_any(Symbol.QUESTION):
+                if self.equal_any(Symbol.QUESTION):
                     sql_statement.increase_paremeters_index()
-                if current_token.token_type == Assit.END or (current_token.token_type == Symbol.RIGHT_PAREN and count == 0):
+                if current_token.token_type == Assit.END or (
+                                current_token.token_type == Symbol.RIGHT_PAREN and count == 0):
                     break
                 if current_token.token_type == Symbol.LEFT_PAREN:
                     count += 1
@@ -131,44 +137,48 @@ class LexerEngine:
             self.lexer.next_token()
             return result
 
-        def accept(self, token_type):
-            if self.lexer.get_current_token.token_type != token_type:
-                raise SQLParsingException(self.lexer, token_type)
+    def accept(self, token_type):
+        if self.lexer.get_current_token().token_type != token_type:
+            raise SQLParsingException(self.lexer, token_type)
+        self.lexer.next_token()
+
+    def equal_any(self, *token_types):
+        for each in token_types:
+            if self.lexer.get_current_token().token_type == each:
+                return True
+        return False
+
+    def skip_if_equal(self, *token_types):
+        if self.equal_any(token_types):
+            self.lexer.next_token()
+            return True
+        return False
+
+    def skip_all(self, *token_types):
+        while self.lexer.get_current_token().token_type in token_types:
             self.lexer.next_token()
 
-        def equal_any(self, *token_types):
-            for each in token_types:
-                if self.lexer.get_current_token.token_type == each:
-                    return True
-            return False
+    def skip_until(self, *token_types):
+        token_types = set(token_types)
+        token_types.add(Assit.END)
+        while self.lexer.get_current_token().token_type not in token_types:
+            self.lexer.next_token()
 
-        def skip_if_equal(self, *token_types):
-            if self.equal_any(token_types):
-                self.lexer.next_token()
-                return True
-            return False
+    def unsupported_if_equal(self, *token_types):
+        if self.equal_any(token_types):
+            raise SQLParsingUnsupportedException(self.lexer.get_current_token().token_type)
 
-        def skip_all(self, *token_types):
-            while self.lexer.get_current_token().token_type in token_types:
-                self.lexer.next_token()
-
-        def skip_until(self, *token_types):
-            token_types = set(token_types)
-            token_types.add(Assit.END)
-            while self.lexer.get_current_token().token_type not in token_types:
-                self.lexer.next_token()
-
-        def unsupported_if_equal(*token_types):
-            if self.equal_any(token_types):
-                raise SQLParsingUnsupportedException(self.lexer.get_current_token().token_type)
+    def get_database_type(self):
+        if isinstance(self.lexer, MySQLLexer):
+            return DatabaseType.MySQL
+        raise UnsupportedOperationException("Cannot support lexer class: {}".format(self.lexer))
 
 
-class LexerEnginerFactory:
+class LexerEngineFactory:
     @classmethod
     def new_instance(cls, db_type, sql):
         assert isinstance(db_type, DatabaseType)
         if db_type == DatabaseType.MYSQL:
-            return LexerEnginer(MySQLLexer(sql))
+            return LexerEngine(MySQLLexer(sql))
         else:
             raise UnsupportedOperationException("Cannot support database {}".format(db_type))
-
