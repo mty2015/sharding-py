@@ -1,11 +1,12 @@
-from shardingpy.constant import AggregationType, ShardingOperator
-from shardingpy.exception import UnsupportedOperationException
+from shardingpy.constant import AggregationType, ShardingOperator, OrderType
+from shardingpy.exception import UnsupportedOperationException, SQLParsingException
 from shardingpy.parsing.parser.context.condition import Column, Condition
+from shardingpy.parsing.parser.context.others import OrderItem
 from shardingpy.parsing.parser.context.selectitem import StarSelectItem, AggregationSelectItem, CommonSelectItem
 from shardingpy.parsing.parser.context.table import Table
 from shardingpy.parsing.parser.dialect import create_alias_expression_parser, create_basic_expression_parser
 from shardingpy.parsing.parser.expressionparser import SQLPropertyExpression, SQLPlaceholderExpression, \
-    SQLNumberExpression, SQLTextExpression, SQLIdentifierExpression
+    SQLNumberExpression, SQLTextExpression, SQLIdentifierExpression, SQLIgnoreExpression
 from shardingpy.parsing.parser.token import TableToken
 from shardingpy.parsing.token import DefaultKeyword, Symbol
 from shardingpy.util import sqlutil
@@ -37,7 +38,7 @@ class SelectListClauseParser:
                 break
         select_statement.select_list_last_position = self.lexer_engine.get_current_token().end_position - len(
             self.lexer_engine.get_current_token().literals)
-        select_items.extend(select_statement.select_items)
+        select_items.extend(list(select_statement.select_items))
 
     def _parse_select_item(self, select_statement):
         self.lexer_engine.skip_if_equal(*self.get_skipped_keywords_before_select_item())
@@ -278,3 +279,119 @@ class WhereClauseParser:
     def _get_column_without_owner(self, tables, identifier_expression):
         if tables.is_single_table():
             return Column(sqlutil.get_exactly_value(identifier_expression.name), tables.get_single_table_name())
+
+
+class GroupByClauseParser:
+    def __init__(self, lexer_engine):
+        self.lexer_engine = lexer_engine
+        self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
+
+    def parse(self, select_statement):
+        if not self.lexer_engine.skip_if_equal(DefaultKeyword.GROUP):
+            return
+        self.lexer_engine.skip_if_equal(DefaultKeyword.BY)
+
+        while True:
+            self._add_group_by_item(self.basic_expression_parser.parse(select_statement), select_statement)
+            if not self.lexer_engine.equal_any(Symbol.COMMA):
+                break
+            self.lexer_engine.next_token()
+        self.lexer_engine.skip_all(*self.get_skipped_keyword_after_group_by())
+        select_statement.group_by_last_position = self.lexer_engine.get_current_token().end_position - len(
+            self.lexer_engine.get_current_token().literals)
+
+    def _add_group_by_item(self, sql_expr, select_statement):
+        self.lexer_engine.unsupported_if_equal(*self.get_unsupported_keyword_before_group_by_item())
+        order_by_type = OrderType.ASC
+        if self.lexer_engine.equal_any(DefaultKeyword.ASC):
+            self.lexer_engine.next_token()
+        elif self.lexer_engine.skip_if_equal(DefaultKeyword.DESC):
+            order_by_type = OrderType.DESC
+
+        if isinstance(sql_expr, SQLPropertyExpression):
+            order_item = OrderItem(sqlutil.get_exactly_value(sql_expr.owner.name),
+                                   sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderType.ASC,
+                                   select_statement.get_alias(
+                                       sqlutil.get_exactly_value(sql_expr.owner.name) + '.' + sqlutil.get_exactly_value(
+                                           sql_expr.name)))
+        elif isinstance(sql_expr, SQLIdentifierExpression):
+            order_item = OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+                                   order_by_type, OrderType.ASC,
+                                   select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
+        elif isinstance(sql_expr, SQLIgnoreExpression):
+            order_item = OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+                                   order_by_type, OrderType.ASC,
+                                   select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
+        else:
+            return
+        select_statement.group_by_items.add(order_item)
+
+    def get_unsupported_keyword_before_group_by_item(self):
+        return []
+
+    def get_skipped_keyword_after_group_by(self):
+        return []
+
+
+class HavingClauseParser:
+    def __init__(self, lexer_engine):
+        self.lexer_engine = lexer_engine
+
+    def parse(self):
+        self.lexer_engine.unsupported_if_equal(DefaultKeyword.HAVING)
+
+
+class OrderByClauseParser:
+    def __init__(self, lexer_engine):
+        self.lexer_engine = lexer_engine
+        self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
+
+    def parse(self, select_statement):
+        if not self.lexer_engine.skip_if_equal(DefaultKeyword.ORDER):
+            return
+        result = []
+        self.lexer_engine.accept(DefaultKeyword.BY)
+        while True:
+            result.append(self._parse_select_order_by_item(select_statement))
+            if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                break
+        select_statement.order_by_items.extend(result)
+
+    def _parse_select_order_by_item(self, select_statement):
+        sql_expr = self.basic_expression_parser.parse(select_statement)
+        order_by_type = OrderType.ASC
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.ASC):
+            order_by_type = OrderType.ASC
+        elif self.lexer_engine.skip_if_equal(DefaultKeyword.DESC):
+            order_by_type = OrderType.DESC
+
+        if isinstance(sql_expr, SQLNumberExpression):
+            return OrderItem(None, None, order_by_type, OrderType.ASC, None, sql_expr.number)
+        if isinstance(sql_expr, SQLPropertyExpression):
+            return OrderItem(sqlutil.get_exactly_value(sql_expr.owner.name),
+                             sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderType.ASC,
+                             select_statement.get_alias(
+                                 sqlutil.get_exactly_value(sql_expr.owner.name) + '.' + sqlutil.get_exactly_value(
+                                     sql_expr.name)))
+        if isinstance(sql_expr, SQLIdentifierExpression):
+            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+                             order_by_type, OrderType.ASC,
+                             select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
+        if isinstance(sql_expr, SQLIgnoreExpression):
+            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+                             order_by_type, OrderType.ASC,
+                             select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
+        raise SQLParsingException(self.lexer_engine)
+
+
+class SelectRestClauseParser:
+    def __init__(self, lexer_engine):
+        self.lexer_engine = lexer_engine
+
+    def parse(self):
+        unsupported_rest_keywords = [DefaultKeyword.UNION, DefaultKeyword.INTERSECT, DefaultKeyword.EXCEPT,
+                                     DefaultKeyword.MINUS, *self.get_unsupported_keywords_rest()]
+        self.lexer_engine.unsupported_if_equal(*unsupported_rest_keywords)
+
+    def get_unsupported_keywords_rest(self):
+        return []

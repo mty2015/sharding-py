@@ -12,11 +12,23 @@ class StarSelectItem:
     def expression(self):
         return self.owner + '.' + Symbol.STAR.value if self.owner else Symbol.STAR.value
 
+    def __eq__(self, other):
+        return other and isinstance(other, StarSelectItem) and self.__dict__ == other.__dict__
+
+    def __hash__(self):
+        return 1
+
 
 class CommonSelectItem:
     def __init__(self, expression, alias):
         self.expression = expression
         self.alias = alias
+
+    def __eq__(self, other):
+        return other and isinstance(other, CommonSelectItem) and self.__dict__ == other.__dict__
+
+    def __hash__(self):
+        return hash(self.expression)
 
 
 class AggregationSelectItem:
@@ -34,3 +46,9 @@ class AggregationSelectItem:
     @property
     def column_label(self):
         return self.alias if self.alias else self.expression
+
+    def __eq__(self, other):
+        return other and isinstance(other, AggregationSelectItem) and self.__dict__ == other.__dict__
+
+    def __hash__(self):
+        return hash(self.aggregation_type) + hash(self.inner_expression)

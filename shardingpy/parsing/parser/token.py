@@ -10,3 +10,26 @@ class TableToken:
     @property
     def table_name(self):
         return sqlutil.get_exactly_value(self._original_literals)
+
+
+class OffsetToken:
+    def __init__(self, begin_position, offset):
+        self.begin_position = begin_position
+        self.offset = offset
+
+
+class RowCountToken:
+    def __init__(self, begin_position, row_count):
+        self.begin_position = begin_position
+        self.row_count = row_count
+
+
+class ItemsToken:
+    def __init__(self, begin_position):
+        self.begin_position = begin_position
+        self.items = list()
+
+
+class OrderByToken:
+    def __init__(self, begin_position):
+        self.begin_position = begin_position

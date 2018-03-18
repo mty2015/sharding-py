@@ -24,3 +24,8 @@ class ShardingOperator(enum.Enum):
     EQUAL = "="
     BETWEEN = "BETWEEN"
     IN = "IN"
+
+
+class OrderType(enum.IntEnum):
+    ASC = 1
+    DESC = 2
