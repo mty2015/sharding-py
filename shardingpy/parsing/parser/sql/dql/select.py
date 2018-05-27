@@ -3,7 +3,7 @@ from shardingpy.constant import SQLType
 from shardingpy.exception import UnsupportedOperationException
 from shardingpy.parsing.parser.dialect.mysql import MySQLSelectParser
 from shardingpy.parsing.parser.sql import SQLStatement
-from shardingpy.parsing.token import DefaultKeyword, Symbol, Assit
+from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol, Assist
 from shardingpy.parsing.parser.context.selectitem import AggregationSelectItem
 from shardingpy.parsing.parser.token import ItemsToken, OrderByToken
 from shardingpy.constant import AggregationType
@@ -98,7 +98,7 @@ class AbstractSelectParser:
     def _parse_table(self, select_statement):
         if self.lexer_engine.skip_if_equal(Symbol.LEFT_PAREN):
             select_statement.set_sub_query_statement(self._parse_interal())
-            if self.lexer_engine.skip_if_equal(DefaultKeyword.WHERE, Assit.END):
+            if self.lexer_engine.skip_if_equal(DefaultKeyword.WHERE, Assist.END):
                 return
         self.select_clause_parser_facade.table_references_clause_parser.parse(select_statement, False)
 

@@ -1,6 +1,6 @@
 import enum
 
-from ..exception import ShardingJdbcException
+from shardingpy.exception import ShardingJdbcException
 
 EOI = chr(0x1A)
 
@@ -10,7 +10,7 @@ class UnterminatedCharException(ShardingJdbcException):
 
 
 def is_white_space(ch):
-    return (ord(ch) <= 0x20 and ch != EOI) or (ord(ch) > 0x7F and ord(ch) <= 0xA0)
+    return (ord(ch) <= 0x20 and ch != EOI) or (0xA0 >= ord(ch) > 0x7F)
 
 
 def is_end_of_sql(ch):
@@ -72,7 +72,7 @@ class Tokenizer:
         return self.advance(length)
 
     def skip_hint(self):
-        return self.until_comment_and_hint_terminate_sign(HINT_BEGIN_SYMBOL_LENGTH)
+        return self.until_comment_and_hint_terminate_sign(Tokenizer.HINT_BEGIN_SYMBOL_LENGTH)
 
     def until_comment_and_hint_terminate_sign(self, begin_symbol_length):
         length = begin_symbol_length
@@ -112,7 +112,7 @@ class Tokenizer:
         while self._is_variable_char(self._char_at(self.offset + length)):
             length += 1
 
-        return Token(Literals.VARIABLE, self.sql[self.offset, self.offset + length], self.advance(length))
+        return Token(Literals.VARIABLE, self.sql[self.offset: self.offset + length], self.advance(length))
 
     def scan_chars(self):
         terminated_ch = self._char_at(self.offset)
@@ -136,7 +136,7 @@ class Tokenizer:
 
     def scan_hex_decimal(self):
         length = Tokenizer.HEX_BEGIN_SYMBOL_LENGTH
-        if (self._char_at(self.offset + length) == '-'):
+        if self._char_at(self.offset + length) == '-':
             length += 1
         while is_hex(self._char_at(self.offset + length)):
             length += 1
@@ -316,11 +316,6 @@ class Literals(enum.IntEnum):
     CHARS = 4
     IDENTIFIER = 5
     VARIABLE = 6
-
-
-class Assit(enum.IntEnum):
-    END = 1
-    ERROR = 2
 
 
 class DefaultKeyword(enum.IntEnum):
@@ -526,3 +521,8 @@ class DefaultKeyword(enum.IntEnum):
     KEY = 904
     CHECK = 905
     REFERENCE = 906
+
+
+class Assist(enum.IntEnum):
+    END = 1
+    ERROR = 2

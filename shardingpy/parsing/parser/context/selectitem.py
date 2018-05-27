@@ -1,4 +1,4 @@
-from shardingpy.parsing.token import Symbol
+from shardingpy.parsing.lexer.token import Symbol
 
 from shardingpy.util import sqlutil
 

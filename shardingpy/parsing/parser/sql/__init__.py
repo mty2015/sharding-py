@@ -1,7 +1,7 @@
 from shardingpy.exception import SQLParsingUnsupportedException
 from shardingpy.parsing.parser.context.condition import Conditions
 from shardingpy.parsing.parser.context.table import Tables
-from shardingpy.parsing.token import DefaultKeyword
+from shardingpy.parsing.lexer.token import DefaultKeyword
 from .dql.select import new_select_parser
 
 

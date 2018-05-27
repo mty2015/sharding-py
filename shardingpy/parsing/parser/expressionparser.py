@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from shardingpy.parsing.token import DefaultKeyword, Symbol, Literals
+from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol, Literals
 from shardingpy.parsing.parser.token import TableToken
 from shardingpy.util import sqlutil
 

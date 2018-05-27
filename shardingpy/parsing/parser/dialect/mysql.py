@@ -1,10 +1,10 @@
-from shardingpy.parsing.dialect.mysql import MySQLKeyword
+from shardingpy.parsing.lexer.dialect.mysql import MySQLKeyword
 from shardingpy.parsing.parser.clauseparser import DistinctClauseParser
 from shardingpy.parsing.parser.clauseparser import SelectListClauseParser, TableReferencesClauseParser, \
     WhereClauseParser, GroupByClauseParser, HavingClauseParser, OrderByClauseParser, SelectRestClauseParser
 from shardingpy.parsing.parser.expressionparser import AliasExpressionParser
 from shardingpy.parsing.parser.sql.dql.select import AbstractSelectParser
-from shardingpy.parsing.token import DefaultKeyword, Literals, Symbol
+from shardingpy.parsing.lexer.token import DefaultKeyword, Literals, Symbol
 from shardingpy.exception import SQLParsingException
 from shardingpy.parsing.parser.token import OffsetToken, RowCountToken
 from shardingpy.parsing.parser.context.limit import Limit, LimitValue

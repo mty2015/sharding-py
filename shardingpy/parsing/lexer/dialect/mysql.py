@@ -1,23 +1,8 @@
 import enum
-from shardingpy.parsing.lexer import Lexer
-from shardingpy.parsing.token import Dictionary
 
+from shardingpy.parsing.lexer import lexer
+from shardingpy.parsing.lexer import token
 
-class MySQLLexer(Lexer):
-    dictionary = Dictionary(MySQLKeyword)
-
-    def __init__(self, sql):
-        super().__init__(sql, MySQLLexer.dictionary)
-
-    def is_hint_begin(self):
-        return self.get_current_char(0) == '/' and self.get_current_char(1) == '*' and self.get_current_char(2) == '!'
-
-    def is_comment_begin(self):
-        return self.get_current_char(0) == '#' or super().is_comment_begin()
-
-    def is_variable_begin(self):
-        return self.get_current_char(0) == '@'
-    
 
 class MySQLKeyword(enum.IntEnum):
     SHOW = 1
@@ -86,4 +71,20 @@ class MySQLKeyword(enum.IntEnum):
     ROLLUP = 64
     RESTRICT = 65
     STRAIGHT_JOIN = 66
-    REGEXP= 67
+    REGEXP = 67
+
+
+class MySQLLexer(lexer.Lexer):
+    dictionary = token.Dictionary(MySQLKeyword)
+
+    def __init__(self, sql):
+        super().__init__(sql, MySQLLexer.dictionary)
+
+    def is_hint_begin(self):
+        return self.get_current_char(0) == '/' and self.get_current_char(1) == '*' and self.get_current_char(2) == '!'
+
+    def is_comment_begin(self):
+        return self.get_current_char(0) == '#' or super().is_comment_begin()
+
+    def is_variable_begin(self):
+        return self.get_current_char(0) == '@'

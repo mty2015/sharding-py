@@ -8,7 +8,7 @@ from shardingpy.parsing.parser.dialect import create_alias_expression_parser, cr
 from shardingpy.parsing.parser.expressionparser import SQLPropertyExpression, SQLPlaceholderExpression, \
     SQLNumberExpression, SQLTextExpression, SQLIdentifierExpression, SQLIgnoreExpression
 from shardingpy.parsing.parser.token import TableToken
-from shardingpy.parsing.token import DefaultKeyword, Symbol
+from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
 from shardingpy.util import sqlutil
 
 

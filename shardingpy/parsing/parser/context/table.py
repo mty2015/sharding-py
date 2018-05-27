@@ -12,6 +12,7 @@ class Table:
 
 class Tables:
     def __init__(self):
+        # collection contains Table
         self.tables = []
 
     def add(self, table):
