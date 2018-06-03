@@ -1,17 +1,17 @@
+from shardingpy.constant import AggregationType
 from shardingpy.constant import DatabaseType
 from shardingpy.constant import SQLType
 from shardingpy.exception import UnsupportedOperationException
-from shardingpy.parsing.parser.dialect.mysql import MySQLSelectParser
-from shardingpy.parsing.parser.sql import SQLStatement
 from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol, Assist
 from shardingpy.parsing.parser.context.selectitem import AggregationSelectItem
+from shardingpy.parsing.parser.sql import SQLStatement
 from shardingpy.parsing.parser.token import ItemsToken, OrderByToken
-from shardingpy.constant import AggregationType
 from shardingpy.util import strutil, sqlutil
 
 
 def new_select_parser(db_type, sharding_rule, lexer_engine):
     if db_type == DatabaseType.MySQL:
+        from shardingpy.parsing.parser.dialect.mysql import MySQLSelectParser
         return MySQLSelectParser(sharding_rule, lexer_engine)
     else:
         raise UnsupportedOperationException("Cannot support database {}".format(db_type))

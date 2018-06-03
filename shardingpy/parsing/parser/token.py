@@ -3,8 +3,9 @@ from shardingpy.util import sqlutil
 
 
 class TableToken:
-    def __init__(self, begin_position, original_literals):
+    def __init__(self, begin_position, skipped_schema_name_length, original_literals):
         self.begin_position = begin_position
+        self.skipped_schema_name_length = skipped_schema_name_length
         self._original_literals = original_literals
 
     @property

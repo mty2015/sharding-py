@@ -163,4 +163,4 @@ class BasicExpressionParser:
     def _set_table_token(self, sql_statement, begin_position, property_expr):
         owner = property_expr.owner.name
         if sqlutil.get_exactly_value(owner) in sql_statement.tables.get_table_names():
-            sql_statement.sql_tokens.append(TableToken(begin_position - len(owner), owner))
+            sql_statement.sql_tokens.append(TableToken(begin_position - len(owner), 0, owner))

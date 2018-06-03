@@ -1,14 +1,14 @@
+from shardingpy.constant import DatabaseType
+from shardingpy.exception import SQLParsingException
 from shardingpy.parsing.lexer.dialect.mysql import MySQLKeyword
+from shardingpy.parsing.lexer.token import DefaultKeyword, Literals, Symbol
 from shardingpy.parsing.parser.clauseparser import DistinctClauseParser
 from shardingpy.parsing.parser.clauseparser import SelectListClauseParser, TableReferencesClauseParser, \
     WhereClauseParser, GroupByClauseParser, HavingClauseParser, OrderByClauseParser, SelectRestClauseParser
+from shardingpy.parsing.parser.context.limit import Limit, LimitValue
 from shardingpy.parsing.parser.expressionparser import AliasExpressionParser
 from shardingpy.parsing.parser.sql.dql.select import AbstractSelectParser
-from shardingpy.parsing.lexer.token import DefaultKeyword, Literals, Symbol
-from shardingpy.exception import SQLParsingException
 from shardingpy.parsing.parser.token import OffsetToken, RowCountToken
-from shardingpy.parsing.parser.context.limit import Limit, LimitValue
-from shardingpy.constant import DatabaseType
 
 
 class MySQLSelectClauseParserFacade:
@@ -91,6 +91,9 @@ class MySQLGroupByClauseParser(GroupByClauseParser):
 
 
 class MySQLLimitClauseParser:
+    """
+    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+    """
     def __init__(self, lexer_engine):
         self.lexer_engine = lexer_engine
 
@@ -120,6 +123,13 @@ class MySQLLimitClauseParser:
                                                                 is_paramter_for_value, select_satement)
             return
 
+        if is_paramter_for_value:
+            select_satement.increase_parameters_index()
+        else:
+            select_satement.sql_tokens.append(RowCountToken(value_begin_position, value))
+
+        select_satement.limit = Limit(DatabaseType.MySQL, None, LimitValue(value, value_index, False))
+
     def _get_limit_with_comma(self, index, value_begin_position, value, is_paramter_for_value, select_satement):
         row_count_begin_position = self.lexer_engine.get_current_token().end_position
         row_count_index = -1
@@ -135,9 +145,13 @@ class MySQLLimitClauseParser:
         else:
             raise SQLParsingException(self.lexer_engine)
         self.lexer_engine.next_token()
-        if not is_paramter_for_value:
+        if is_paramter_for_value:
+            select_satement.increase_parameters_index()
+        else:
             select_satement.sql_tokens.append(OffsetToken(value_begin_position, value))
-        if not is_paramter_for_raw_count:
+        if is_paramter_for_raw_count:
+            select_satement.increase_parameters_index()
+        else:
             select_satement.sql_tokens.append(RowCountToken(row_count_begin_position, row_count_value))
         return Limit(DatabaseType.MySQL, LimitValue(value, index, True),
                      LimitValue(row_count_value, row_count_index, False))
@@ -157,9 +171,13 @@ class MySQLLimitClauseParser:
         else:
             raise SQLParsingException(self.lexer_engine)
         self.lexer_engine.next_token()
-        if not is_paramter_for_value:
+        if is_paramter_for_value:
+            select_satement.increase_parameters_index()
+        else:
             select_satement.sql_tokens.append(RowCountToken(value_begin_position, value))
-        if not is_paramter_for_offset:
+        if is_paramter_for_offset:
+            select_satement.increase_parameters_index()
+        else:
             select_satement.sql_tokens.append(OffsetToken(offset_begin_position, offset_value))
         return Limit(DatabaseType.MySQL, LimitValue(offset_value, offset_index, True),
                      LimitValue(value, index, False))

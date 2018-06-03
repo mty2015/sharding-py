@@ -1,14 +1,15 @@
 from shardingpy.constant import AggregationType, ShardingOperator, OrderType
 from shardingpy.exception import UnsupportedOperationException, SQLParsingException
+from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
 from shardingpy.parsing.parser.context.condition import Column, Condition
 from shardingpy.parsing.parser.context.others import OrderItem
 from shardingpy.parsing.parser.context.selectitem import StarSelectItem, AggregationSelectItem, CommonSelectItem
 from shardingpy.parsing.parser.context.table import Table
-from shardingpy.parsing.parser.dialect import create_alias_expression_parser, create_basic_expression_parser
+from shardingpy.parsing.parser.dialect.expression_parser_factory import create_alias_expression_parser, \
+    create_basic_expression_parser
 from shardingpy.parsing.parser.expressionparser import SQLPropertyExpression, SQLPlaceholderExpression, \
     SQLNumberExpression, SQLTextExpression, SQLIdentifierExpression, SQLIgnoreExpression
 from shardingpy.parsing.parser.token import TableToken
-from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
 from shardingpy.util import sqlutil
 
 
@@ -107,6 +108,7 @@ class SelectListClauseParser:
             result += self.lexer_engine.get_current_token().literals
             self.lexer_engine.next_token()
             result += self._parse_common_select_item(select_statement)
+        return result
 
 
 class TableReferencesClauseParser:
@@ -132,9 +134,11 @@ class TableReferencesClauseParser:
     def parse_table_factor(self, sql_statement, is_single_table_only):
         literals = self.lexer_engine.get_current_token().literals
         begin_position = self.lexer_engine.get_current_token().end_position - len(literals)
+        skipped_schema_name_length = 0
         self.lexer_engine.next_token()
-        if self.lexer_engine.equal_any(Symbol.DOT):
-            raise UnsupportedOperationException("Cannot support for 'schema.table'")
+        if self.lexer_engine.skip_if_equal(Symbol.DOT):
+            skipped_schema_name_length += len(literals) + len(Symbol.DOT.value)
+            literals = self.lexer_engine.get_current_token().literals
         table_name = sqlutil.get_exactly_value(literals)
         if not table_name:
             return
@@ -142,11 +146,16 @@ class TableReferencesClauseParser:
         if is_single_table_only or self.sharding_rule.try_find_table_rule(
                 table_name) or self.sharding_rule.find_binding_table_rule(
             table_name) or self.sharding_rule.default_datasource_name in self.sharding_rule.data_source_map:
-            sql_statement.sql_tokens.append(TableToken(begin_position, literals))
+            sql_statement.sql_tokens.append(TableToken(begin_position, skipped_schema_name_length, literals))
             sql_statement.tables.add(Table(table_name, alias))
+        self._parse_force_index(table_name, sql_statement)
         self._parse_join_table(sql_statement)
         if is_single_table_only and not sql_statement.tables.is_single_table():
             raise UnsupportedOperationException("Cannot support Multiple-Table")
+
+    def _parse_force_index(self, table_name, sql_statement):
+        # TODO force index
+        pass
 
     def _parse_join_table(self, sql_statement):
         while self._parse_join_type():
@@ -173,10 +182,10 @@ class TableReferencesClauseParser:
                 self.basic_expression_parser.parse(sql_statement)
                 self.lexer_engine.accept(Symbol.EQ)
                 self.basic_expression_parser.parse(sql_statement)
-                if self.lexer_engine.skip_if_equal(DefaultKeyword.AND):
+                if not self.lexer_engine.skip_if_equal(DefaultKeyword.AND):
                     break
         elif self.lexer_engine.skip_if_equal(DefaultKeyword.USING):
-            self.lexer_engine.skip_parenthese(sql_statement)
+            self.lexer_engine.skip_parentheses(sql_statement)
 
 
 class WhereClauseParser:
@@ -236,9 +245,9 @@ class WhereClauseParser:
     def _parse_equal_condition(self, sharding_rule, sql_statement, left):
         right = self.basic_expression_parser.parse(sql_statement)
         if (sql_statement.tables.is_single_table() or isinstance(left, SQLPropertyExpression)) and (
-                        isinstance(right, SQLPlaceholderExpression) or isinstance(right,
-                                                                                  SQLNumberExpression) or isinstance(
-                    right, SQLTextExpression)):
+                isinstance(right, SQLPlaceholderExpression) or isinstance(right,
+                                                                          SQLNumberExpression) or isinstance(
+            right, SQLTextExpression)):
             column = self._find(sql_statement.tables, left)
             if column:
                 sql_statement.conditions.add(Condition(column, ShardingOperator.EQUAL, right), sharding_rule)
