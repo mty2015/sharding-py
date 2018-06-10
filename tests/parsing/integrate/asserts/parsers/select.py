@@ -11,7 +11,7 @@ parser_result_set = {
             {
                 "tableTokens": [
                     {
-                        "original-literals": "t_order",
+                        "original-literals": "t_order_item",
                         "begin-position": 14
                     }
                 ]

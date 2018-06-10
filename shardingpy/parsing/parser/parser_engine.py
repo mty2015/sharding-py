@@ -3,10 +3,11 @@ from shardingpy.parsing.parser.sql.parser_factory import SQLParserFactory
 
 
 class SQLParsingEngine:
-    def __init__(self, db_type, sql, sharding_rule):
+    def __init__(self, db_type, sql, sharding_rule, sharding_meta_data):
         self.db_type = db_type
         self.sql = sql
         self.sharding_rule = sharding_rule
+        self.sharding_meta_data = sharding_meta_data
 
     def parse(self):
         """

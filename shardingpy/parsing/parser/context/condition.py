@@ -38,8 +38,9 @@ class Condition:
                 self._values.append(expr.number)
             position += 1
 
+    # Deprecated
     def get_sharding_value(self, parameters):
-        condition_values = self._get_condition_values(parameters)
+        condition_values = self.get_condition_values(parameters)
         if self.operator in [ShardingOperator.EQUAL, ShardingOperator.IN]:
             return ListShardingValue(self.column.table_name, self.column.name, condition_values)
         elif self.operator == ShardingOperator.BETWEEN:
@@ -49,7 +50,7 @@ class Condition:
         else:
             raise UnsupportedOperationException("sharding condition not support :" + self.operator.value)
 
-    def _get_condition_values(self, parameters):
+    def get_condition_values(self, parameters):
         result = self._values[:]
         for position, param_index in self._position_index_map.items():
             parameter = parameters[param_index]
