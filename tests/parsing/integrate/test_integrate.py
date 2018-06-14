@@ -4,7 +4,7 @@ from shardingpy.api.config.base import load_sharding_rule_config_from_dict
 from shardingpy.constant import DatabaseType
 from shardingpy.metadata.base import ShardingMetaData, TableMetaData, ColumnMetaData
 from shardingpy.parsing.parser.parser_engine import SQLParsingEngine
-from shardingpy.rule.base import ShareRule
+from shardingpy.rule.base import ShardingRule
 from .asserts.base import get_parser_result
 from . import parser_rule
 from .. import sql as sql_cases_loader
@@ -25,7 +25,7 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
 
     def get_sharding_rule(self):
         sharding_rule_config = load_sharding_rule_config_from_dict(parser_rule.sharding_rule_config['sharding_rule'])
-        return ShareRule(sharding_rule_config, parser_rule.sharding_rule_config['data_sources'].keys())
+        return ShardingRule(sharding_rule_config, parser_rule.sharding_rule_config['data_sources'].keys())
 
     def get_sharding_meta_data(self):
         sharding_meta_data = ShardingMetaData()

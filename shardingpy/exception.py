@@ -32,3 +32,7 @@ class SQLParsingUnsupportedException(ShardingJdbcException):
 
 class UnsupportedOperationException(ShardingJdbcException):
     pass
+
+
+class ShardingConfigurationException(ShardingJdbcException):
+    pass

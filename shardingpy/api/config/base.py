@@ -22,6 +22,14 @@ class TableRuleConfiguration(object):
         self.logic_index = None
 
 
+class MasterSlaveRuleConfiguration(object):
+    def __init__(self):
+        self.name = None
+        self.master_data_source_name = None
+        self.slave_data_source_names = list()
+        self.load_balance_algorithm = None
+
+
 def load_sharding_rule_config_from_dict(cfg):
     config = ShardingRuleConfiguration()
 
@@ -61,10 +69,10 @@ def load_master_slave_rule_config(cfg):
     if not cfg:
         return result
     for name, ms in cfg.items():
-        master_slave_rule_config = dict()
-        master_slave_rule_config['name'] = name
-        master_slave_rule_config['master_data_source_name'] = ms['master_data_source_name']
-        master_slave_rule_config['slave_data_source_names'] = ms['slave_data_source_names']
-        master_slave_rule_config['load_balance_algorithm'] = ms['load_balance_algorithm']
+        master_slave_rule_config = MasterSlaveRuleConfiguration()
+        master_slave_rule_config.name = name
+        master_slave_rule_config.master_data_source_name = ms['master_data_source_name']
+        master_slave_rule_config.slave_data_source_names = ms['slave_data_source_names']
+        master_slave_rule_config.load_balance_algorithm = ms['load_balance_algorithm']
         result.append(master_slave_rule_config)
     return result

@@ -1,7 +1,7 @@
 from shardingpy.constant import AggregationType, ShardingOperator, OrderType
 from shardingpy.exception import UnsupportedOperationException, SQLParsingException
 from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
-from shardingpy.parsing.parser.context.condition import Column, Condition
+from shardingpy.parsing.parser.context.condition import Column, Condition, OrCondition, AndCondition, NullCondition
 from shardingpy.parsing.parser.context.others import OrderItem
 from shardingpy.parsing.parser.context.selectitem import StarSelectItem, AggregationSelectItem, CommonSelectItem
 from shardingpy.parsing.parser.context.table import Table
@@ -189,7 +189,8 @@ class TableReferencesClauseParser:
 
 
 class WhereClauseParser:
-    def __init__(self, lexer_engine):
+    def __init__(self, database_type, lexer_engine):
+        self.database_type = database_type
         self.lexer_engine = lexer_engine
         self.alias_expression_parser = create_alias_expression_parser(lexer_engine)
         self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
@@ -197,31 +198,71 @@ class WhereClauseParser:
     def parse(self, sharding_rule, sql_statement, select_items):
         self.alias_expression_parser.parse_table_alias()
         if self.lexer_engine.skip_if_equal(DefaultKeyword.WHERE):
-            self._parse_conditions(sharding_rule, sql_statement, select_items)
+            self._parse_where(sharding_rule, sql_statement, select_items)
 
-    def _parse_conditions(self, sharding_rule, sql_statement, select_items):
+    def _parse_where(self, sharding_rule, sql_statement, select_items):
+        or_condition = self._parse_or(sharding_rule, sql_statement, select_items)
+        if not (len(or_condition.and_condtions) == 1 and isinstance(or_condition.and_condtions[0].conditions[0],
+                                                                    NullCondition)):
+            sql_statement.conditions.or_condition.and_conditions.extend(or_condition.and_condtions)
+
+    def _parse_or(self, sharding_rule, sql_statement, select_items):
+        result = OrCondition()
         while True:
-            self._parse_comparison_condition(sharding_rule, sql_statement, select_items)
+            if self.lexer_engine.skip_if_equal(Symbol.LEFT_PAREN):
+                sub_or_condition = self._parse_or(sharding_rule, sql_statement, select_items)
+                self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
+                or_condition = None
+                result.and_conditions.extend(self._merge_or(sub_or_condition, or_condition).and_condtions)
+            else:
+                or_condition = self.parse_and(sharding_rule, sql_statement, select_items)
+                result.and_conditions.extend(or_condition.and_condtions)
+            if not self.lexer_engine.skip_if_equal(DefaultKeyword.OR):
+                break
+        return result
+
+    def _parse_and(self, sharding_rule, sql_statement, select_items):
+        result = OrCondition()
+        while True:
+            if self.lexer_engine.skip_if_equal(Symbol.LEFT_PAREN):
+                sub_or_condition = self._parse_or(sharding_rule, sql_statement, select_items)
+                self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
+                result = self._merge_or(result, sub_or_condition)
+            else:
+                condition = self._parse_comparison_condition(sharding_rule, sql_statement, select_items)
+                self._skip_double_colon()
+                result = self._merge_or(result, OrCondition(condition))
             if not self.lexer_engine.skip_if_equal(DefaultKeyword.AND):
                 break
-        self.lexer_engine.unsupported_if_equal(DefaultKeyword.OR)
+        return result
+
+    def _merge_or(self, or_condition1, or_condition2):
+        if not or_condition1 or not or_condition1.and_conditions:
+            return or_condition2
+        if not or_condition2 or not or_condition2.and_conditions:
+            return or_condition1
+        result = OrCondition()
+        for each1 in or_condition1.and_conditions:
+            for each2 in or_condition2.and_conditions:
+                result.and_conditions.extend(self._merge_and(each1, each2))
+        return result
+
+    def _merge_and(self, and_condition1, and_condition2):
+        result = AndCondition()
+        result.conditions.extend(and_condition1.conditions)
+        result.conditions.extend(and_condition2.conditions)
+        return result.optimize()
 
     def _parse_comparison_condition(self, sharding_rule, sql_statement, select_items):
-        self.lexer_engine.skip_if_equal(Symbol.LEFT_PAREN)
         left = self.basic_expression_parser.parse(sql_statement)
         if self.lexer_engine.skip_if_equal(Symbol.EQ):
-            self._parse_equal_condition(sharding_rule, sql_statement, left)
-            self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
-            return
+            return self._parse_equal_condition(sharding_rule, sql_statement, left)
         if self.lexer_engine.skip_if_equal(DefaultKeyword.IN):
-            self._parse_in_condition(sharding_rule, sql_statement, left)
-            self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
-            return
+            return self._parse_in_condition(sharding_rule, sql_statement, left)
         if self.lexer_engine.skip_if_equal(DefaultKeyword.BETWEEN):
-            self._parse_between_condition(sharding_rule, sql_statement, left)
-            self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
-            return
+            return self._parse_between_condition(sharding_rule, sql_statement, left)
 
+        result = NullCondition();
         other_condition_operators = [Symbol.LT, Symbol.LT_EQ, Symbol.GT, Symbol.GT_EQ, Symbol.LT_GT, Symbol.BANG_EQ,
                                      Symbol.BANG_GT, Symbol.BANG_LT, DefaultKeyword.LIKE, DefaultKeyword.IS]
         other_condition_operators.extend(self.get_customized_other_condition_operators())
@@ -229,18 +270,33 @@ class WhereClauseParser:
             self._parse_other_condition(sql_statement)
 
         if self.skip_if_equal(DefaultKeyword.NOT):
-            self.lexer_engine.next_token()
-            self.lexer_engine.skip_if_equal(Symbol.LEFT_PAREN)
-            self._parse_other_condition(sql_statement)
-            self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
+            self._parse_not_condition(sql_statement)
 
-        self.lexer_engine.skip_if_equal(Symbol.RIGHT_PAREN)
+        return result
 
     def get_customized_other_condition_operators(self):
         return []
 
     def _parse_other_condition(self, sql_statement):
         self.basic_expression_parser.parse(sql_statement)
+
+    def _parse_not_condition(self, sql_statement):
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.BETWEEN):
+            self._parse_other_condition(sql_statement)
+            self._skip_double_colon()
+            self.lexer_engine.skip_if_equal(DefaultKeyword.AND)
+            self._parse_other_condition(sql_statement)
+            return
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.IN):
+            self.lexer_engine.accept(Symbol.LEFT_PAREN)
+            while True:
+                self._parse_other_condition(sql_statement)
+                self._skip_double_colon()
+                if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                    break
+            self.lexer_engine.accept(Symbol.RIGHT_PAREN)
+        self.lexer_engine.next_token()
+        self._parse_other_condition(sql_statement)
 
     def _parse_equal_condition(self, sharding_rule, sql_statement, left):
         right = self.basic_expression_parser.parse(sql_statement)
@@ -249,30 +305,34 @@ class WhereClauseParser:
                                                                           SQLNumberExpression) or isinstance(
             right, SQLTextExpression)):
             column = self._find(sql_statement.tables, left)
-            if column:
-                sql_statement.conditions.add(Condition(column, ShardingOperator.EQUAL, right), sharding_rule)
+            if column and sharding_rule.is_sharding_column(column):
+                return Condition(column, right)
+        return NullCondition()
 
     def _parse_in_condition(self, sharding_rule, sql_statement, left):
         self.lexer_engine.accept(Symbol.LEFT_PAREN)
-        rights = []
+        rights = list()
         while True:
-            self.lexer_engine.skip_if_equal(Symbol.COMMA)
             rights.append(self.basic_expression_parser.parse(sql_statement))
-            if self.lexer_engine.equal_any(Symbol.RIGHT_PAREN):
+            self._skip_double_colon()
+            if self.lexer_engine.equal_any(Symbol.COMMA):
                 break
+        self.lexer_engine.accept(Symbol.RIGHT_PAREN)
         column = self._find(sql_statement.tables, left)
-        if column:
-            sql_statement.conditions.add(Condition(column, ShardingOperator.IN, *rights), sharding_rule)
-        self.lexer_engine.next_token()
+        if column and sharding_rule.is_sharding_column(column):
+            return Condition(column, ShardingOperator.IN, *rights)
+        return NullCondition()
 
     def _parse_between_condition(self, sharding_rule, sql_statement, left):
-        rights = []
+        rights = list()
         rights.append(self.basic_expression_parser.parse(sql_statement))
+        self._skip_double_colon()
         self.lexer_engine.accept(DefaultKeyword.AND)
         rights.append(self.basic_expression_parser.parse(sql_statement))
         column = self._find(sql_statement.tables, left)
-        if column:
-            sql_statement.conditions.add(Condition(column, ShardingOperator.BETWEEN, *rights), sharding_rule)
+        if column and sharding_rule.is_sharding_column(column):
+            return Condition(column, ShardingOperator.BETWEEN, *rights)
+        return NullCondition()
 
     def _find(self, tables, sql_expression):
         if isinstance(sql_expression, SQLPropertyExpression):
@@ -288,6 +348,10 @@ class WhereClauseParser:
     def _get_column_without_owner(self, tables, identifier_expression):
         if tables.is_single_table():
             return Column(sqlutil.get_exactly_value(identifier_expression.name), tables.get_single_table_name())
+
+    def _skip_double_colon(self):
+        if self.lexer_engine.skip_if_equal(Symbol.DOUBLE_COLON):
+            self.lexer_engine.next_token()
 
 
 class GroupByClauseParser:

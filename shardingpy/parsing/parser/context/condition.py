@@ -6,6 +6,7 @@ from shardingpy.constant import ShardingOperator
 from shardingpy.exception import UnsupportedOperationException
 from shardingpy.parsing.parser.expressionparser import SQLPlaceholderExpression, SQLTextExpression, SQLNumberExpression
 from shardingpy.util.extype import RangeType, Range
+from shardingpy.util.strutil import equals_ignore_case
 
 
 class Column:
@@ -14,10 +15,11 @@ class Column:
         self.table_name = table_name
 
     def __eq__(self, other):
-        return other and isinstance(other, Column) and self.__dict__ == other.__dict__
+        return other and isinstance(other, Column) and equals_ignore_case(self.name, other.name) and equals_ignore_case(
+            self.table_name, other.table_name)
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.name) + 17 * hash(self.table_name) if self.table_name else 0
 
 
 class Condition:
@@ -61,12 +63,46 @@ class Condition:
         return result
 
 
+class AndCondition(object):
+    def __init__(self):
+        self.conditions = list()
+
+    def get_conditions_map(self):
+        pass
+
+    def optimize(self):
+        result = AndCondition()
+        result.conditions = [each for each in self.conditions if type(each) == Condition]
+        if not result.conditions:
+            result.conditions.append(NullCondition())
+        return result
+
+
+class OrCondition(object):
+    def __init__(self, condition=None):
+        self.and_conditions = list()
+        if condition:
+            self.add(condition)
+
+    def add(self, condition):
+        if len(self.and_conditions) == 0:
+            self.and_conditions.append(AndCondition())
+        self.and_conditions[0].condtions.append(condition)
+
+    def find(self, column, index):
+        pass
+
+
 class Conditions:
     def __init__(self, conditions=None):
-        self.conditions = dict()
+        self.or_condition = OrCondition()
         if conditions:
-            self.conditions = conditions.copy()
+            self.or_condition.and_conditions.extend(conditions.or_condition.and_conditions)
 
     def add(self, condition, sharding_rule):
         if sharding_rule.is_sharding_column(condition.column):
-            self.conditions[condition.column] = condition
+            self.or_condition.add(condition)
+
+
+class NullCondition(Condition):
+    pass

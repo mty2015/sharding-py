@@ -81,6 +81,9 @@ class MySQLAliasExpressionParser(AliasExpressionParser):
 
 
 class MySQLWhereClauseParser(WhereClauseParser):
+    def __init__(self, lexer_engine):
+        super().__init__(DatabaseType.MySQL, lexer_engine)
+
     def get_customized_other_condition_operators(self):
         return [MySQLKeyword.REGEXP]
 
