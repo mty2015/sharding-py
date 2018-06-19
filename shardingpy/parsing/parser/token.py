@@ -2,35 +2,65 @@
 from shardingpy.util import sqlutil
 
 
-class TableToken:
-    def __init__(self, begin_position, skipped_schema_name_length, original_literals):
+class SQLToken:
+    def __init__(self, begin_position):
         self.begin_position = begin_position
+
+
+class TableToken(SQLToken):
+    def __init__(self, begin_position, skipped_schema_name_length, original_literals):
+        super().__init__(begin_position)
         self.skipped_schema_name_length = skipped_schema_name_length
-        self._original_literals = original_literals
+        self.original_literals = original_literals
 
     @property
     def table_name(self):
-        return sqlutil.get_exactly_value(self._original_literals)
+        return sqlutil.get_exactly_value(self.original_literals)
 
 
-class OffsetToken:
+class OffsetToken(SQLToken):
     def __init__(self, begin_position, offset):
-        self.begin_position = begin_position
+        super().__init__(begin_position)
         self.offset = offset
 
 
-class RowCountToken:
+class RowCountToken(SQLToken):
     def __init__(self, begin_position, row_count):
-        self.begin_position = begin_position
+        super().__init__(begin_position)
         self.row_count = row_count
 
 
-class ItemsToken:
+class ItemsToken(SQLToken):
     def __init__(self, begin_position):
-        self.begin_position = begin_position
+        super().__init__(begin_position)
+        self.is_first_of_items_special = False
         self.items = list()
 
 
-class OrderByToken:
-    def __init__(self, begin_position):
-        self.begin_position = begin_position
+class OrderByToken(SQLToken):
+    pass
+
+
+class IndexToken(SQLToken):
+    def __init__(self, begin_position, table_name, original_literals):
+        super().__init__(begin_position)
+        self._table_name = table_name
+        self.original_literals = original_literals
+
+    @property
+    def table_name(self):
+        return sqlutil.get_exactly_value(self._table_name)
+
+    @property
+    def index_name(self):
+        return sqlutil.get_exactly_value(self.original_literals)
+
+
+class GeneratedKeyToken(SQLToken):
+    pass
+
+
+class InsertValuesToken(SQLToken):
+    def __init__(self, begin_position, table_name):
+        super().__init__(begin_position)
+        self._table_name = table_name
