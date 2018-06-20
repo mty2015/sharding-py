@@ -1,4 +1,4 @@
-from shardingpy.constant import AggregationType, ShardingOperator, OrderType
+from shardingpy.constant import AggregationType, ShardingOperator, OrderDirection
 from shardingpy.exception import UnsupportedOperationException, SQLParsingException
 from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
 from shardingpy.parsing.parser.context.condition import Column, Condition, OrCondition, AndCondition, NullCondition
@@ -375,25 +375,25 @@ class GroupByClauseParser:
 
     def _add_group_by_item(self, sql_expr, select_statement):
         self.lexer_engine.unsupported_if_equal(*self.get_unsupported_keyword_before_group_by_item())
-        order_by_type = OrderType.ASC
+        order_by_type = OrderDirection.ASC
         if self.lexer_engine.equal_any(DefaultKeyword.ASC):
             self.lexer_engine.next_token()
         elif self.lexer_engine.skip_if_equal(DefaultKeyword.DESC):
-            order_by_type = OrderType.DESC
+            order_by_type = OrderDirection.DESC
 
         if isinstance(sql_expr, SQLPropertyExpression):
             order_item = OrderItem(sqlutil.get_exactly_value(sql_expr.owner.name),
-                                   sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderType.ASC,
+                                   sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderDirection.ASC,
                                    select_statement.get_alias(
                                        sqlutil.get_exactly_value(sql_expr.owner.name) + '.' + sqlutil.get_exactly_value(
                                            sql_expr.name)))
         elif isinstance(sql_expr, SQLIdentifierExpression):
             order_item = OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
-                                   order_by_type, OrderType.ASC,
+                                   order_by_type, OrderDirection.ASC,
                                    select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         elif isinstance(sql_expr, SQLIgnoreExpression):
             order_item = OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
-                                   order_by_type, OrderType.ASC,
+                                   order_by_type, OrderDirection.ASC,
                                    select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
         else:
             return
@@ -432,27 +432,27 @@ class OrderByClauseParser:
 
     def _parse_select_order_by_item(self, select_statement):
         sql_expr = self.basic_expression_parser.parse(select_statement)
-        order_by_type = OrderType.ASC
+        order_by_type = OrderDirection.ASC
         if self.lexer_engine.skip_if_equal(DefaultKeyword.ASC):
-            order_by_type = OrderType.ASC
+            order_by_type = OrderDirection.ASC
         elif self.lexer_engine.skip_if_equal(DefaultKeyword.DESC):
-            order_by_type = OrderType.DESC
+            order_by_type = OrderDirection.DESC
 
         if isinstance(sql_expr, SQLNumberExpression):
-            return OrderItem(None, None, order_by_type, OrderType.ASC, None, sql_expr.number)
+            return OrderItem(None, None, order_by_type, OrderDirection.ASC, None, sql_expr.number)
         if isinstance(sql_expr, SQLPropertyExpression):
             return OrderItem(sqlutil.get_exactly_value(sql_expr.owner.name),
-                             sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderType.ASC,
+                             sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(
                                  sqlutil.get_exactly_value(sql_expr.owner.name) + '.' + sqlutil.get_exactly_value(
                                      sql_expr.name)))
         if isinstance(sql_expr, SQLIdentifierExpression):
             return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
-                             order_by_type, OrderType.ASC,
+                             order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         if isinstance(sql_expr, SQLIgnoreExpression):
             return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
-                             order_by_type, OrderType.ASC,
+                             order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
         raise SQLParsingException(self.lexer_engine)
 

@@ -1,6 +1,7 @@
 import os
 
 from shardingpy.parsing.parser.context.selectitem import AggregationSelectItem
+from shardingpy.parsing.parser.sql.dql.select import SelectStatement
 from shardingpy.parsing.parser.token import *
 from tests.parsing.sql import SQLCaseType, get_supported_sql
 from .parsers import ALL_PARSER_RESULT_SET
@@ -262,6 +263,12 @@ class TokenAssert:
         self.row_count_token_assert = RowCountTokenAssert(message_helper, test_case, sql_case_type)
 
     def assert_tokens(self, actual, expected):
+        """
+        {
+          'table_tokens': [{'begin_position': 1, 'original_literals': 't_order'}, {}],
+          'items_tokens': {'begin_position': 34, 'items': []}
+        }
+        """
         self.table_token_assert.assert_table_tokens(actual, expected)
         self.index_token_assert.assert_index_token(actual, expected)
         self.items_token_assert.assert_items_token(actual, expected)
@@ -291,6 +298,17 @@ class ItemAssert:
         self.test_case = test_case
 
     def assert_items(self, actual, expected):
+        """
+        [
+          {
+            'type': 'AVG',
+            'inner_expression': '(order_id)',
+            'alias': 'orders_avg',
+            'index': -1,
+            'derived_columns': [{...}]
+          }
+        ]
+        """
         self.assert_aggregation_select_items(actual, expected)
 
     def assert_aggregation_select_items(self, actual, expected):
@@ -313,17 +331,105 @@ class ItemAssert:
             self.assert_aggregation_select_item(each1, each2)
 
 
+class GroupByAssert:
+    def __init__(self, message_helper, test_case):
+        self.message_helper = message_helper
+        self.test_case = test_case
+
+    def assert_group_by_items(self, actual, expected):
+        self.test_case.assertEqual(len(actual), len(expected), self.message_helper('Group by items size error: '))
+        for each1, each2 in zip(actual, expected):
+            self.assert_group_by_item(each1, each2)
+
+    def assert_group_by_item(self, actual, expected):
+        self.test_case.assertEqual(actual.owner, expected.get('owner'),
+                                   self.message_helper('Group by item owner assertion error: '))
+        self.test_case.assertEqual(actual.name, expected.get('name'),
+                                   self.message_helper('Group by item name assertion error: '))
+        self.test_case.assertEqual(actual.order_direction.name, expected.get('order_direction'),
+                                   self.message_helper('Group by item order direction assertion error: '))
+        self.test_case.assertEqual(actual.alias, expected.get('alias'),
+                                   self.message_helper('Group by item alias assertion error: '))
+
+
+class OrderByAssert:
+    def __init__(self, message_helper, test_case):
+        self.message_helper = message_helper
+        self.test_case = test_case
+
+    def assert_order_by_items(self, actual, expected):
+        self.test_case.assertEqual(len(actual), len(expected), self.message_helper('Order by items size error: '))
+        for each1, each2 in zip(actual, expected):
+            self.assert_group_by_item(each1, each2)
+
+    def assert_order_by_item(self, actual, expected):
+        self.test_case.assertEqual(actual.owner, expected.get('owner'),
+                                   self.message_helper('Order by item owner assertion error: '))
+        self.test_case.assertEqual(actual.name, expected.get('name'),
+                                   self.message_helper('Order by item name assertion error: '))
+        self.test_case.assertEqual(actual.order_direction.name, expected.get('order_direction'),
+                                   self.message_helper('Order by item order direction assertion error: '))
+        self.test_case.assertEqual(actual.alias, expected.get('alias'),
+                                   self.message_helper('Order by item alias assertion error: '))
+        self.test_case.assertEqual(actual.index, expected.get('index'),
+                                   self.message_helper('Order by item index assertion error: '))
+
+
+class LimitAssert:
+    def __init__(self, message_helper, test_case, sql_case_type):
+        self.message_helper = message_helper
+        self.test_case = test_case
+        self.sql_case_type = sql_case_type
+
+    def assert_limit(self, actual, expected):
+        if not actual:
+            self.test_case.assertFalse(expected)
+        if self.sql_case_type == SQLCaseType.Placeholder:
+            if actual.offset:
+                self.test_case.assertEqual(actual.offset.index, expected.get('offset_parameter_index'),
+                                           self.message_helper('Limit offset index assertion error: '))
+            if actual.row_count:
+                self.test_case.assertEqual(actual.row_count.index, expected.get('row_count_parameter_index'),
+                                           self.message_helper('Limit row count index assertion error: '))
+        else:
+            if actual.offset:
+                self.test_case.assertEqual(actual.offset.value, expected.get('offset'),
+                                           self.message_helper('Limit offset value assertion error: '))
+            if actual.row_count:
+                self.test_case.assertEqual(actual.row_count.value, expected.get('row_count'),
+                                           self.message_helper('Limit row count value assertion error: '))
+
+
 class SQLStatementAssert(object):
     def __init__(self, actual, sql_case_id, sql_case_type, test_case):
         self.test_case = test_case
         self.actual = actual
         self.expected = get_parser_result(sql_case_id)
         message_helper = print_assert_message(sql_case_id, sql_case_type)
+
         self.table_assert = TableAssert(message_helper, test_case)
         self.condition_assert = ConditionAssert(message_helper, test_case)
         self.token_assert = TokenAssert(message_helper, test_case, sql_case_type)
         self.index_assert = IndexAssert(message_helper, test_case, sql_case_type)
         self.item_assert = ItemAssert(message_helper, test_case)
+        self.group_by_assert = GroupByAssert(message_helper, test_case)
+        self.order_by_assert = OrderByAssert(message_helper, test_case)
+        self.limit_assert = LimitAssert(message_helper, test_case, sql_case_type)
+
+    def assert_sql_statement(self):
+        self.table_assert.assert_tables(self.actual.tables, self.expected.get('tables', []))
+        self.condition_assert.assert_or_condition(self.actual.conditions.or_condition,
+                                                  self.expected.get('or_condition', []))
+        self.token_assert.assert_tokens(self.actual.sql_tokens, self.expected.get('tokens'))
+        self.index_assert.assert_parameters_index(self.actual.parameters_index,
+                                                  len(self.expected.get('parameters', [])))
+        if isinstance(self.actual, SelectStatement):
+            self.item_assert.assert_items(self.actual.select_items, self.expected.get('aggregation_select_items'))
+            self.group_by_assert.assert_group_by_items(self.actual.group_by_items,
+                                                       self.expected.get('group_by_columns', []))
+            self.order_by_assert.assert_order_by_items(self.actual.order_by_items,
+                                                       self.expected.get('order_by_columns', []))
+            self.limit_assert.assert_limit(self.actual.limit, self.expected.get('limit', {}))
 
 
 def print_assert_message(sql_case_id, sql_case_type):

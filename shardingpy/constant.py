@@ -26,6 +26,6 @@ class ShardingOperator(enum.Enum):
     IN = "IN"
 
 
-class OrderType(enum.IntEnum):
+class OrderDirection(enum.IntEnum):
     ASC = 1
     DESC = 2
