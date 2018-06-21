@@ -24,8 +24,10 @@ class Column:
 
 class Condition:
     def __init__(self, column, operator, *sql_expressions):
-        assert isinstance(column, Column)
-        assert isinstance(operator, ShardingOperator)
+        if column:
+            assert isinstance(column, Column)
+        if operator:
+            assert isinstance(operator, ShardingOperator)
         self.column = column
         self.operator = operator
         self._position_index_map = OrderedDict()
@@ -87,7 +89,7 @@ class OrCondition(object):
     def add(self, condition):
         if len(self.and_conditions) == 0:
             self.and_conditions.append(AndCondition())
-        self.and_conditions[0].condtions.append(condition)
+        self.and_conditions[0].conditions.append(condition)
 
     def find(self, column, index):
         pass
@@ -105,4 +107,5 @@ class Conditions:
 
 
 class NullCondition(Condition):
-    pass
+    def __init__(self):
+        super().__init__(None, None)

@@ -4,7 +4,7 @@ from shardingpy.parsing.parser.expressionparser import BasicExpressionParser
 
 
 def create_alias_expression_parser(lexer_engine):
-    if lexer_engine.get_database_type == DatabaseType.MySQL:
+    if lexer_engine.get_database_type() == DatabaseType.MySQL:
         return mysql.MySQLAliasExpressionParser(lexer_engine)
 
 

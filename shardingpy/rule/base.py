@@ -31,6 +31,16 @@ class ShardingRule(object):
     def get_table_rule(self, logic_table_name):
         pass
 
+    def try_find_table_rule_by_logic_table(self, logic_table_name):
+        for each in self.table_rules:
+            if each.logic_table == logic_table_name.lower():
+                return each
+
+    def find_binding_table_rule(self, logic_table):
+        for each in self.binding_table_rules:
+            if each.has_logic_table(logic_table):
+                return each
+
     def is_sharding_column(self, column):
         if column.name in self.default_database_sharding_strategy.sharding_columns or \
                 column.name in self.default_table_sharding_strategy.sharding_columns:
@@ -43,9 +53,9 @@ class ShardingRule(object):
 
 
 class ShardingDatasourceNames(object):
-    def __init__(self, sharding_rule_configuration, raw_datasource_names):
+    def __init__(self, sharding_rule_configuration, raw_data_source_names):
         self.sharding_rule_configuration = sharding_rule_configuration
-        self.data_source_names = self._get_all_data_source_names(raw_datasource_names)
+        self.data_source_names = self._get_all_data_source_names(raw_data_source_names)
 
     def _get_all_data_source_names(self, data_source_names):
         result = list(data_source_names)
@@ -101,6 +111,12 @@ class TableRule(object):
 class BindingTableRule(object):
     def __init__(self, table_rules):
         self.table_rules = table_rules
+
+    def has_logic_table(self, logic_table):
+        for each in self.table_rules:
+            if each.logic_table == logic_table.lower():
+                return True
+        return False
 
 
 class MasterSlaveRule(object):

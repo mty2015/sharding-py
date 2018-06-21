@@ -7,17 +7,16 @@ parser_result_set = {
         "tables": [
             {"name": "t_order_item"}
         ],
-        "tokens": [
+        "tokens":
             {
-                "tableTokens": [
+                "table_tokens": [
                     {
-                        "original-literals": "t_order_item",
-                        "begin-position": 14
+                        "original_literals": "t_order_item",
+                        "begin_position": 14
                     }
                 ]
-            }
-        ],
-        "order-by-columns": [
+            },
+        "order_by_columns": [
             {"name": "item_id", "order_direction": "ASC"}
         ]
     }

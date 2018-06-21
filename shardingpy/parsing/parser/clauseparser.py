@@ -48,7 +48,7 @@ class SelectListClauseParser:
         elif self._is_star_select_item():
             select_statement.contain_star = True
             result = self._parse_star_select_item()
-        elif self._is_aggregation_select_item(select_statement):
+        elif self._is_aggregation_select_item():
             result = self._parse_aggregation_select_item(select_statement)
             self._parse_rest_select_item(select_statement)
         else:
@@ -143,9 +143,10 @@ class TableReferencesClauseParser:
         if not table_name:
             return
         alias = self.alias_expression_parser.parse_table_alias()
-        if is_single_table_only or self.sharding_rule.try_find_table_rule(
+        if is_single_table_only or self.sharding_rule.try_find_table_rule_by_logic_table(
                 table_name) or self.sharding_rule.find_binding_table_rule(
-            table_name) or self.sharding_rule.default_datasource_name in self.sharding_rule.data_source_map:
+            table_name) or self.sharding_rule.sharding_data_source_names.get_default_data_source_name() in \
+                self.sharding_rule.sharding_data_source_names.data_source_names:
             sql_statement.sql_tokens.append(TableToken(begin_position, skipped_schema_name_length, literals))
             sql_statement.tables.add(Table(table_name, alias))
         self._parse_force_index(table_name, sql_statement)
@@ -202,9 +203,9 @@ class WhereClauseParser:
 
     def _parse_where(self, sharding_rule, sql_statement, select_items):
         or_condition = self._parse_or(sharding_rule, sql_statement, select_items)
-        if not (len(or_condition.and_condtions) == 1 and isinstance(or_condition.and_condtions[0].conditions[0],
-                                                                    NullCondition)):
-            sql_statement.conditions.or_condition.and_conditions.extend(or_condition.and_condtions)
+        if not (len(or_condition.and_conditions) == 1 and isinstance(or_condition.and_conditions[0].conditions[0],
+                                                                     NullCondition)):
+            sql_statement.conditions.or_condition.and_conditions.extend(or_condition.and_conditions)
 
     def _parse_or(self, sharding_rule, sql_statement, select_items):
         result = OrCondition()
@@ -215,8 +216,8 @@ class WhereClauseParser:
                 or_condition = None
                 result.and_conditions.extend(self._merge_or(sub_or_condition, or_condition).and_condtions)
             else:
-                or_condition = self.parse_and(sharding_rule, sql_statement, select_items)
-                result.and_conditions.extend(or_condition.and_condtions)
+                or_condition = self._parse_and(sharding_rule, sql_statement, select_items)
+                result.and_conditions.extend(or_condition.and_conditions)
             if not self.lexer_engine.skip_if_equal(DefaultKeyword.OR):
                 break
         return result
@@ -269,7 +270,7 @@ class WhereClauseParser:
         if self.lexer_engine.skip_if_equal(*other_condition_operators):
             self._parse_other_condition(sql_statement)
 
-        if self.skip_if_equal(DefaultKeyword.NOT):
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.NOT):
             self._parse_not_condition(sql_statement)
 
         return result
@@ -451,7 +452,7 @@ class OrderByClauseParser:
                              order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         if isinstance(sql_expr, SQLIgnoreExpression):
-            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.expression),
                              order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
         raise SQLParsingException(self.lexer_engine)

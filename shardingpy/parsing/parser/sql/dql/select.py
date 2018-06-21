@@ -23,7 +23,7 @@ class SelectStatement(SQLStatement):
         self.contain_star = False
         self.select_list_last_position = 0
         self.group_by_last_position = 0
-        self.select_items = set()
+        self.select_items = list()
         self.group_by_items = list()
         self.order_by_items = list()
         self.limit = None
@@ -150,7 +150,7 @@ class AbstractSelectParser:
                 items_token.items.append(each.get_qualified_name() + " AS " + alias)
 
     def _is_contains_item(self, order_item, select_statement):
-        if select_statement.contain_star():
+        if select_statement.contain_star:
             return True
         for each in select_statement.select_items:
             if each.index != -1:

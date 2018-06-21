@@ -17,16 +17,16 @@ class TableAssert(object):
         self.message_helper = message_helper
         self.test_case = test_case
 
-    def assert_tables(self, actual, expectd):
-        self.test_case.assertEqual(len(actual), len(expectd),
+    def assert_tables(self, actual, exepectd):
+        self.test_case.assertEqual(len(actual.get_table_names()), len(exepectd),
                                    self.message_helper('Tables size assertion error: '))
-        for e_table in expectd:
+        for e_table in exepectd:
             if e_table.get('alias'):
                 a_table = actual.find(e_table.get('alias'))
             else:
                 a_table = actual.find(e_table.get('name'))
-            self.test_case.assertTrue(a_table, self.message_helper(
-                'Table [{}] should exist'.format(e_table.get('alias') or e_table.get('name`'))))
+            self.test_case.assertIsNotNone(a_table, self.message_helper(
+                'Table [{}] should exist'.format(e_table.get('alias') or e_table.get('name'))))
 
     def assert_table(self, actual, expected):
         self.test_case.assertEqual(actual.name, expected.get('name'),
@@ -360,7 +360,7 @@ class OrderByAssert:
     def assert_order_by_items(self, actual, expected):
         self.test_case.assertEqual(len(actual), len(expected), self.message_helper('Order by items size error: '))
         for each1, each2 in zip(actual, expected):
-            self.assert_group_by_item(each1, each2)
+            self.assert_order_by_item(each1, each2)
 
     def assert_order_by_item(self, actual, expected):
         self.test_case.assertEqual(actual.owner, expected.get('owner'),
@@ -371,7 +371,7 @@ class OrderByAssert:
                                    self.message_helper('Order by item order direction assertion error: '))
         self.test_case.assertEqual(actual.alias, expected.get('alias'),
                                    self.message_helper('Order by item alias assertion error: '))
-        self.test_case.assertEqual(actual.index, expected.get('index'),
+        self.test_case.assertEqual(actual.index, expected.get('index', -1),
                                    self.message_helper('Order by item index assertion error: '))
 
 
@@ -383,7 +383,8 @@ class LimitAssert:
 
     def assert_limit(self, actual, expected):
         if not actual:
-            self.test_case.assertFalse(expected)
+            self.test_case.assertFalse(expected, self.message_helper('Limit should not exist: '))
+            return
         if self.sql_case_type == SQLCaseType.Placeholder:
             if actual.offset:
                 self.test_case.assertEqual(actual.offset.index, expected.get('offset_parameter_index'),
@@ -420,11 +421,11 @@ class SQLStatementAssert(object):
         self.table_assert.assert_tables(self.actual.tables, self.expected.get('tables', []))
         self.condition_assert.assert_or_condition(self.actual.conditions.or_condition,
                                                   self.expected.get('or_condition', []))
-        self.token_assert.assert_tokens(self.actual.sql_tokens, self.expected.get('tokens'))
+        self.token_assert.assert_tokens(self.actual.sql_tokens, self.expected.get('tokens', {}))
         self.index_assert.assert_parameters_index(self.actual.parameters_index,
                                                   len(self.expected.get('parameters', [])))
         if isinstance(self.actual, SelectStatement):
-            self.item_assert.assert_items(self.actual.select_items, self.expected.get('aggregation_select_items'))
+            self.item_assert.assert_items(self.actual.select_items, self.expected.get('aggregation_select_items', []))
             self.group_by_assert.assert_group_by_items(self.actual.group_by_items,
                                                        self.expected.get('group_by_columns', []))
             self.order_by_assert.assert_order_by_items(self.actual.order_by_items,
@@ -434,13 +435,13 @@ class SQLStatementAssert(object):
 
 def print_assert_message(sql_case_id, sql_case_type):
     def print_msg(assert_msg):
-        result = 'SQL Case ID: ' + sql_case_id + os.linesep
-        result += 'SQL      :'
+        result = '\nSQL Case ID: ' + sql_case_id + os.linesep
+        result += 'SQL        : '
         sql = get_supported_sql(sql_case_id, sql_case_type, get_parser_result(sql_case_id).get('parameters'))
         result += sql
         if sql_case_type == SQLCaseType.Placeholder:
             result += os.linesep
-            result += 'SQL Params   :' + get_parser_result(sql_case_id).get('parameters')
+            result += 'SQL Params   :' + str(get_parser_result(sql_case_id).get('parameters', ''))
             result += os.linesep
         result += os.linesep
         result += assert_msg

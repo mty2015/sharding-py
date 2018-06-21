@@ -54,7 +54,7 @@ class LexerEngine:
         return False
 
     def skip_if_equal(self, *token_types):
-        if self.equal_any(token_types):
+        if self.equal_any(*token_types):
             self.lexer.next_token()
             return True
         return False

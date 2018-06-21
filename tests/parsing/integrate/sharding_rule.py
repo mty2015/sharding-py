@@ -68,7 +68,7 @@ sharding_rule_config = {
             }
         },
         'binding_tables': [('t_order', 't_order_item')],
-        'default_database_name': 'default_ds',
+        'default_data_source_name': 'default_ds',
         'default_database_strategy': {
             'inline': {
                 'sharding_columns': ['order_id'],

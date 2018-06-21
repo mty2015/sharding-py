@@ -14,7 +14,7 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
 
     def test_supported_sqls(self):
         for sql_case_id, database_type, sql_case_type in sql_cases_loader.get_supported_sql_test_parameters(
-                [DatabaseType.MySQL, DatabaseType.H2]):
+                [DatabaseType.MySQL]):
             self.assert_supported_sql(sql_case_id, database_type, sql_case_type)
 
     def assert_supported_sql(self, sql_case_id, database_type, sql_case_type):

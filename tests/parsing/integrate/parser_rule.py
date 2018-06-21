@@ -6,7 +6,7 @@ sharding_rule_config = {
     'sharding_rule': {
         'tables': {
             't_order': {
-                'actual_data_nodes': ['ds0.t_order', 'ds0.t_order'],
+                'actual_data_nodes': ['ds0.t_order', 'ds1.t_order'],
                 'table_strategy': {
                     'complex': {
                         'sharding_columns': ['user_id', 'order_id'],
