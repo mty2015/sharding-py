@@ -1,7 +1,9 @@
-from shardingpy.routing.strategy.base import NoneShardingStrategy, get_sharding_strategy
+from shardingpy.api.config.base import TableRuleConfiguration
+from shardingpy.routing.strategy.base import NoneShardingStrategy
 from shardingpy.keygen.base import DefaultKeyGenerator
 from shardingpy.util import strutil
 from shardingpy.exception import ShardingConfigurationException
+from shardingpy.routing.strategy.factory import get_sharding_strategy
 
 
 class ShardingRule(object):
@@ -18,10 +20,10 @@ class ShardingRule(object):
                 [self.get_table_rule(logic_table_name_for_binding) for logic_table_name_for_binding in group]))
         self.default_database_sharding_strategy = get_sharding_strategy(
             sharding_rule_configuration.default_database_sharding_strategy_config) \
-            if sharding_rule_configuration.default_database_sharding_strategy_config else NoneShardingStrategy
+            if sharding_rule_configuration.default_database_sharding_strategy_config else NoneShardingStrategy()
         self.default_table_sharding_strategy = get_sharding_strategy(
             sharding_rule_configuration.default_table_sharding_strategy_config) \
-            if sharding_rule_configuration.default_table_sharding_strategy_config else NoneShardingStrategy
+            if sharding_rule_configuration.default_table_sharding_strategy_config else NoneShardingStrategy()
         self.default_key_generator = sharding_rule_configuration.default_key_generator \
             if sharding_rule_configuration.default_key_generator else DefaultKeyGenerator()
         self.master_slave_rules = list()
@@ -29,7 +31,22 @@ class ShardingRule(object):
             self.master_slave_rules.append(MasterSlaveRule(each))
 
     def get_table_rule(self, logic_table_name):
-        pass
+        table_rule = self.try_find_table_rule_by_logic_table(logic_table_name.lower())
+        if table_rule:
+            return table_rule
+
+        if self.sharding_data_source_names.get_default_data_source_name():
+            return self._create_table_rule_with_default_data_source_name(logic_table_name.lower())
+
+        raise ShardingConfigurationException(
+            "Cannot find table rule and default data source with logic table: '{}'".format(logic_table_name))
+
+    def _create_table_rule_with_default_data_source_name(self, logic_table_name):
+        table_rule_config = TableRuleConfiguration()
+        table_rule_config.logic_table = logic_table_name
+        table_rule_config.actual_data_nodes = self.sharding_data_source_names.get_default_data_source_name() + '.' + logic_table_name
+        return TableRule(table_rule_config, ShardingDatasourceNames(self.sharding_rule_configuration, [
+            self.sharding_data_source_names.get_default_data_source_name()]))
 
     def try_find_table_rule_by_logic_table(self, logic_table_name):
         for each in self.table_rules:
@@ -42,14 +59,21 @@ class ShardingRule(object):
                 return each
 
     def is_sharding_column(self, column):
-        if column.name in self.default_database_sharding_strategy.sharding_columns or \
-                column.name in self.default_table_sharding_strategy.sharding_columns:
+        if column.name in self.default_database_sharding_strategy.get_sharding_columns() or \
+                column.name in self.default_table_sharding_strategy.get_sharding_columns():
             return True
 
         for table_rule in self.table_rules:
             if not strutil.equals_ignore_case(column.table_name, table_rule.logic_table):
                 continue
-            # if table_rule.database_
+
+            if table_rule.data_base_sharding_strategy and column.name in table_rule.data_base_sharding_strategy.get_sharding_columns():
+                return True
+
+            if table_rule.table_sharding_strategy and column.name in table_rule.table_sharding_strategy.get_sharding_columns():
+                return True
+
+        return False
 
 
 class ShardingDatasourceNames(object):
@@ -77,6 +101,13 @@ class TableRule(object):
         self.table_rule_configuration = table_rule_configuration
         self.actual_data_nodes = self._generate_data_nodes(table_rule_configuration.actual_data_nodes,
                                                            sharding_datasource_names.data_source_names)
+        self.data_base_sharding_strategy = get_sharding_strategy(
+            table_rule_configuration.database_strategy_config) if table_rule_configuration.database_strategy_config else None
+        self.table_sharding_strategy = get_sharding_strategy(
+            table_rule_configuration.table_strategy_config) if table_rule_configuration.table_strategy_config else None
+        self.generate_key_column = table_rule_configuration.key_generator_name
+        self.key_generator = table_rule_configuration.key_generator
+        self.logic_index = table_rule_configuration.logic_index.lower() if table_rule_configuration.logic_index else None
 
     def _generate_data_nodes(self, actual_data_nodes, data_source_names):
         result = list()

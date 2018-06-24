@@ -3,7 +3,7 @@ from shardingpy.constant import DatabaseType
 from shardingpy.constant import SQLType
 from shardingpy.exception import UnsupportedOperationException
 from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol, Assist
-from shardingpy.parsing.parser.context.selectitem import AggregationSelectItem
+from shardingpy.parsing.parser.context.selectitem import AggregationSelectItem, StarSelectItem
 from shardingpy.parsing.parser.sql import SQLStatement
 from shardingpy.parsing.parser.token import ItemsToken, OrderByToken
 from shardingpy.util import strutil, sqlutil
@@ -38,6 +38,9 @@ class SelectStatement(SQLStatement):
                 return each.alias
             if strutil.equals_ignore_case(raw_name, each.alias):
                 return raw_name
+
+    def get_star_select_items(self):
+        return [each for each in self.select_items if isinstance(each, StarSelectItem)]
 
     def contains_sub_query(self):
         return self.sub_query_statement is not None
@@ -150,14 +153,30 @@ class AbstractSelectParser:
                 items_token.items.append(each.get_qualified_name() + " AS " + alias)
 
     def _is_contains_item(self, order_item, select_statement):
-        if select_statement.contain_star:
+        if order_item.index != -1:
             return True
+
+        if select_statement.get_star_select_items():
+            return self._is_contains_item_in_star_select_item(select_statement.get_star_select_items(), order_item,
+                                                              select_statement.tables)
+
         for each in select_statement.select_items:
-            if each.index != -1:
-                # ORDER BY [position]
-                return True
             if each.alias and order_item.alias and strutil.equals_ignore_case(each.alias, order_item.alias):
                 return True
+            if not each.alias and order_item.get_qualified_name() and strutil.equals_ignore_case(each.expression,
+                                                                                                 order_item.get_qualified_name()):
+                return True
+        return False
+
+    def _is_contains_item_in_star_select_item(self, star_select_items, order_item, tables):
+        for each in star_select_items:
+            if not each.owner:
+                return True
+
+            table_optional_of_star_item = tables.find(each.owner)
+            if order_item.owner and tables.find(order_item.owner) == table_optional_of_star_item:
+                return True
+
             if not each.alias and order_item.get_qualified_name() and strutil.equals_ignore_case(each.expression,
                                                                                                  order_item.get_qualified_name()):
                 return True

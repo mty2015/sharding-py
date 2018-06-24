@@ -52,7 +52,7 @@ class ConditionAssert(object):
             count += 1
 
     def assert_and_condition(self, actual, expected):
-        self.test_case.assertEqual(len(actual.conditions), expected)
+        self.test_case.assertEqual(len(actual.conditions), len(expected))
         count = 0
         for each in actual.conditions:
             self.assert_condition(each, expected[count])
@@ -63,15 +63,15 @@ class ConditionAssert(object):
                                    self.message_helper('Condition table name assertion error: '))
         self.test_case.assertEqual(actual.column.name.upper(), expected['column_name'].upper(),
                                    self.message_helper('Condition column name assertion error: '))
-        self.test_case.assertEqual(actual.column.operator.name, expected['operator'].upper(),
+        self.test_case.assertEqual(actual.operator.name, expected['operator'].upper(),
                                    self.message_helper('Condition column name assertion error: '))
         count = 0
         for index, value in expected['values']:
-            if actual['_values']:
-                self.test_case.assertEqual(actual['_values'][count], value,
+            if actual._values:
+                self.test_case.assertEqual(actual._values[count], value,
                                            self.message_helper('Condition parameter value assertion error: '))
-            elif actual['_position_index_map']:
-                self.test_case.assertEqual(actual.get(count), index,
+            elif actual._position_index_map:
+                self.test_case.assertEqual(actual._position_index_map.get(count), index,
                                            self.message_helper('Condition parameter index assertion error: '))
             count += 1
 

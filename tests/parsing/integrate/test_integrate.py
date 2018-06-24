@@ -5,6 +5,7 @@ from shardingpy.constant import DatabaseType
 from shardingpy.metadata.base import ShardingMetaData, TableMetaData, ColumnMetaData
 from shardingpy.parsing.parser.parser_engine import SQLParsingEngine
 from shardingpy.rule.base import ShardingRule
+from tests.parsing.sql import SQLCaseType
 from . import parser_rule
 from .asserts.base import get_parser_result, SQLStatementAssert
 from .. import sql as sql_cases_loader
@@ -16,6 +17,9 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
         for sql_case_id, database_type, sql_case_type in sql_cases_loader.get_supported_sql_test_parameters(
                 [DatabaseType.MySQL]):
             self.assert_supported_sql(sql_case_id, database_type, sql_case_type)
+
+    def test_one(self):
+        self.assert_supported_sql('assertSelectNoShardingTable', DatabaseType.MySQL, SQLCaseType.Literal)
 
     def assert_supported_sql(self, sql_case_id, database_type, sql_case_type):
         print("test: {} - {} - {}".format(sql_case_id, database_type.name, sql_case_type.name))

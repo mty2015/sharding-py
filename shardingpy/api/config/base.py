@@ -1,3 +1,4 @@
+from shardingpy.util.reflectionutil import load_class_for_name
 class ShardingRuleConfiguration(object):
     def __init__(self):
         self.default_data_source_name = None
@@ -30,6 +31,12 @@ class MasterSlaveRuleConfiguration(object):
         self.load_balance_algorithm = None
 
 
+class ComplexShardingStrategyConfiguration(object):
+    def __init__(self):
+        self.sharding_columns = list()
+        self.sharding_algorithm = None
+
+
 def load_sharding_rule_config_from_dict(cfg):
     config = ShardingRuleConfiguration()
 
@@ -55,13 +62,26 @@ def load_table_rule_configs(cfg):
         table_rule_config = TableRuleConfiguration()
         table_rule_config.logic_table = table_logic_name
         table_rule_config.actual_data_nodes = _table_rule_config['actual_data_nodes']
-        table_rule_config.database_strategy_config = _table_rule_config.get('database_strategy')
-        table_rule_config.table_strategy_config = _table_rule_config.get('table_strategy')
+        table_rule_config.database_strategy_config = load_strategy_config(_table_rule_config.get('database_strategy'))
+        table_rule_config.table_strategy_config = load_strategy_config(_table_rule_config.get('table_strategy'))
         table_rule_config.key_generator_name = _table_rule_config.get('key_generator_name')
         table_rule_config.key_generator = _table_rule_config.get('key_generator')
         table_rule_config.logic_index = _table_rule_config.get('logic_index')
         table_rule_configs.append(table_rule_config)
     return table_rule_configs
+
+
+def load_strategy_config(cfg):
+    if not cfg:
+        return
+
+    if 'complex' in cfg:
+        result = ComplexShardingStrategyConfiguration()
+        result.sharding_columns = cfg['complex']['sharding_columns']
+        algorithm_class_name = cfg['complex']['algorithm_class_name']
+        assert algorithm_class_name
+        result.sharding_algorithm = load_class_for_name(algorithm_class_name)()
+        return result
 
 
 def load_master_slave_rule_config(cfg):

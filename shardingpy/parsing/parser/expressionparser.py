@@ -76,8 +76,9 @@ class AliasExpressionParser:
     def parse_table_alias(self):
         if self.lexer_engine.skip_if_equal(DefaultKeyword.AS):
             return self._parse_with_as()
-        if self.lexer_engine.equal_any(self.get_default_available_keywords_for_table_alias().extend(
-                self.get_customized_available_keywords_for_table_alias())):
+        if self.lexer_engine.equal_any(
+                *self.get_default_available_keywords_for_table_alias()) or self.lexer_engine.equal_any(
+                *self.get_customized_available_keywords_for_table_alias()):
             return self._parse_alias()
 
     def get_default_available_keywords_for_table_alias(self):
@@ -140,6 +141,8 @@ class BasicExpressionParser:
             return SQLNumberExpression(float(literals))
         if self.lexer_engine.equal_any(Literals.HEX):
             return SQLNumberExpression(int(literals, 16))
+        if self.lexer_engine.equal_any(Literals.IDENTIFIER):
+            return SQLIdentifierExpression(sqlutil.get_exactly_value(literals))
         return SQLIgnoreExpression(literals)
 
     def _skip_if_composite_expression(self, sql_statement):

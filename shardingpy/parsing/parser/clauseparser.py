@@ -52,9 +52,7 @@ class SelectListClauseParser:
             result = self._parse_aggregation_select_item(select_statement)
             self._parse_rest_select_item(select_statement)
         else:
-            result = CommonSelectItem(sqlutil.get_exactly_value(
-                self._parse_common_select_item(select_statement) + self._parse_rest_select_item(select_statement)),
-                self.alias_expression_parser.parse_select_item_alias())
+            result = self._parse_common_or_star_select_item(select_statement)
         return result
 
     def get_skipped_keywords_before_select_item(self):
@@ -84,30 +82,34 @@ class SelectListClauseParser:
         return AggregationSelectItem(aggregation_type, self.lexer_engine.skip_parentheses(select_statement),
                                      self.alias_expression_parser.parse_select_item_alias())
 
-    def _parse_common_select_item(self, select_statement):
+    def _parse_common_or_star_select_item(self, select_statement):
         result = ""
         literals = self.lexer_engine.get_current_token().literals
-        result += literals
         position = self.lexer_engine.get_current_token().end_position - len(literals)
+        result += literals
         self.lexer_engine.next_token()
         if self.lexer_engine.equal_any(Symbol.LEFT_PAREN):
             result += self.lexer_engine.skip_parentheses(select_statement)
         elif self.lexer_engine.equal_any(Symbol.DOT):
             table_name = sqlutil.get_exactly_value(literals)
-            if self.sharding_rule.try_find_table_rule(table_name) or self.sharding_rule.find_binding_table_rule():
-                select_statement.sql_tokens.append(TableToken(position, literals))
+            if self.sharding_rule.try_find_table_rule_by_logic_table(
+                    table_name) or self.sharding_rule.find_binding_table_rule(table_name):
+                select_statement.sql_tokens.append(TableToken(position, 0, literals))
             result += self.lexer_engine.get_current_token().literals
             self.lexer_engine.next_token()
+            if self.lexer_engine.equal_any(Symbol.STAR):
+                return self._parse_star_select_item()
             result += self.lexer_engine.get_current_token().literals
             self.lexer_engine.next_token()
-        return result
+        return CommonSelectItem(sqlutil.get_exactly_value(result) + self._parse_rest_select_item(select_statement),
+                                self.alias_expression_parser.parse_select_item_alias())
 
     def _parse_rest_select_item(self, select_statement):
         result = ""
         while self.lexer_engine.equal_any(*Symbol.operators()):
             result += self.lexer_engine.get_current_token().literals
             self.lexer_engine.next_token()
-            result += self._parse_common_select_item(select_statement)
+            result += self._parse_common_or_star_select_item(select_statement)
         return result
 
 
@@ -171,7 +173,7 @@ class TableReferencesClauseParser:
         join_type_keywords.extend(self.get_keywords_for_join_type())
         if not self.lexer_engine.equal_any(*join_type_keywords):
             return False
-        self.lexer_engine.skip_all(join_type_keywords)
+        self.lexer_engine.skip_all(*join_type_keywords)
         return True
 
     def get_keywords_for_join_type(self):
@@ -245,7 +247,7 @@ class WhereClauseParser:
         result = OrCondition()
         for each1 in or_condition1.and_conditions:
             for each2 in or_condition2.and_conditions:
-                result.and_conditions.extend(self._merge_and(each1, each2))
+                result.and_conditions.append(self._merge_and(each1, each2))
         return result
 
     def _merge_and(self, and_condition1, and_condition2):
@@ -268,6 +270,7 @@ class WhereClauseParser:
                                      Symbol.BANG_GT, Symbol.BANG_LT, DefaultKeyword.LIKE, DefaultKeyword.IS]
         other_condition_operators.extend(self.get_customized_other_condition_operators())
         if self.lexer_engine.skip_if_equal(*other_condition_operators):
+            self.lexer_engine.skip_if_equal(DefaultKeyword.NOT)
             self._parse_other_condition(sql_statement)
 
         if self.lexer_engine.skip_if_equal(DefaultKeyword.NOT):
@@ -296,8 +299,9 @@ class WhereClauseParser:
                 if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
                     break
             self.lexer_engine.accept(Symbol.RIGHT_PAREN)
-        self.lexer_engine.next_token()
-        self._parse_other_condition(sql_statement)
+        else:
+            self.lexer_engine.next_token()
+            self._parse_other_condition(sql_statement)
 
     def _parse_equal_condition(self, sharding_rule, sql_statement, left):
         right = self.basic_expression_parser.parse(sql_statement)
@@ -307,7 +311,7 @@ class WhereClauseParser:
             right, SQLTextExpression)):
             column = self._find(sql_statement.tables, left)
             if column and sharding_rule.is_sharding_column(column):
-                return Condition(column, right)
+                return Condition(column, ShardingOperator.EQUAL, right)
         return NullCondition()
 
     def _parse_in_condition(self, sharding_rule, sql_statement, left):
@@ -316,7 +320,7 @@ class WhereClauseParser:
         while True:
             rights.append(self.basic_expression_parser.parse(sql_statement))
             self._skip_double_colon()
-            if self.lexer_engine.equal_any(Symbol.COMMA):
+            if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
                 break
         self.lexer_engine.accept(Symbol.RIGHT_PAREN)
         column = self._find(sql_statement.tables, left)

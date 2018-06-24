@@ -10,7 +10,7 @@ sharding_rule_config = {
                 'table_strategy': {
                     'complex': {
                         'sharding_columns': ['user_id', 'order_id'],
-                        'algorithm': None
+                        'algorithm_class_name': 'tests.api.algorithm.fixture.TestComplexKeysShardingAlgorithm'
                     }
                 },
                 'logic_index': 'order_index'
@@ -20,7 +20,7 @@ sharding_rule_config = {
                 'table_strategy': {
                     'complex': {
                         'sharding_columns': ['user_id', 'order_id', 'item_id'],
-                        'algorithm': None
+                        'algorithm_class_name': 'tests.api.algorithm.fixture.TestComplexKeysShardingAlgorithm'
                     }
                 },
                 'key_generator_column_name': 'item_id'
@@ -30,7 +30,7 @@ sharding_rule_config = {
                 'table_strategy': {
                     'complex': {
                         'sharding_columns': ['user_new_id', 'guid'],
-                        'algorithm': None
+                        'algorithm_class_name': 'tests.api.algorithm.fixture.TestComplexKeysShardingAlgorithm'
                     }
                 },
                 'key_generator_column_name': 'item_id'
