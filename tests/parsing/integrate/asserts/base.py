@@ -27,6 +27,10 @@ class TableAssert(object):
                 a_table = actual.find(e_table.get('name'))
             self.test_case.assertIsNotNone(a_table, self.message_helper(
                 'Table [{}] should exist'.format(e_table.get('alias') or e_table.get('name'))))
+            self.test_case.assertEqual(a_table.name, e_table.get('name'),
+                                       self.message_helper('Table name assertion error: '))
+            self.test_case.assertEqual(a_table.alias, e_table.get('alias'),
+                                       self.message_helper('Table alias assertion error: '))
 
     def assert_table(self, actual, expected):
         self.test_case.assertEqual(actual.name, expected.get('name'),
@@ -127,8 +131,10 @@ class ItemsTokenAssert:
         if items_tokens:
             items_token = items_tokens[0]
             self.test_case.assertEqual(items_token.begin_position,
-                                       expected.get('items_token', {}).get('begin_position'))
-            self.test_case.assertEqual(items_token.items, expected.get('items_token', {}).get('items'))
+                                       expected.get('items_token', {}).get('begin_position'),
+                                       self.message_helper('Items token begin position assertion error: '))
+            self.test_case.assertEqual(items_token.items, expected.get('items_token', {}).get('items'),
+                                       self.message_helper('Items token items assertion error: '))
         else:
             self.test_case.assertFalse(expected.get('items_token'),
                                        self.message_helper('Items token should not exist: '))
@@ -319,13 +325,13 @@ class ItemAssert:
             self.assert_aggregation_select_item(each1, each2)
 
     def assert_aggregation_select_item(self, actual, expected):
-        self.test_case.assertEqual(actual.aggregation_tyoe.name, expected.get('type'),
+        self.test_case.assertEqual(actual.aggregation_type.name, expected.get('type'),
                                    self.message_helper('Aggregation select item aggregation type assertion error: '))
         self.test_case.assertEqual(actual.inner_expression, expected.get('inner_expression'),
                                    self.message_helper('Aggregation select item inner expression assertion error: '))
         self.test_case.assertEqual(actual.alias, expected.get('alias'),
                                    self.message_helper('Aggregation select item alias assertion error: '))
-        self.test_case.assertEqual(actual.index, expected.get('index'),
+        self.test_case.assertEqual(actual.index, expected.get('index', -1),
                                    self.message_helper('Aggregation select item index assertion error: '))
         for each1, each2 in zip(actual.derived_aggregation_select_items, expected.get('derived_columns', [])):
             self.assert_aggregation_select_item(each1, each2)

@@ -9,7 +9,7 @@ class LexerEngine:
         self.lexer = lexer
 
     def get_sql(self):
-        return self.lexer.get_sql()
+        return self.lexer.sql
 
     def next_token(self):
         return self.lexer.next_token()
@@ -20,7 +20,7 @@ class LexerEngine:
     def skip_parentheses(self, sql_statement):
         result = ''
         count = 0
-        current_token = self.get_current_token
+        current_token = self.get_current_token()
         if Symbol.LEFT_PAREN == current_token.token_type:
             begin_position = current_token.end_position
             result += Symbol.LEFT_PAREN.value
@@ -29,16 +29,16 @@ class LexerEngine:
             while True:
                 if self.equal_any(Symbol.QUESTION):
                     sql_statement.increase_parameters_index()
-                if current_token.token_type == Assist.END or (
-                        current_token.token_type == Symbol.RIGHT_PAREN and count == 0):
+                if current_token.token_type is Assist.END or (
+                        current_token.token_type is Symbol.RIGHT_PAREN and count == 0):
                     break
-                if current_token.token_type == Symbol.LEFT_PAREN:
+                if current_token.token_type is Symbol.LEFT_PAREN:
                     count += 1
-                elif current_token.token_type == Symbol.RIGHT_PAREN:
+                elif current_token.token_type is Symbol.RIGHT_PAREN:
                     count -= 1
                 self.lexer.next_token()
-                current_token = self.lexer.get_currrent_token()
-            result += self.lexer.get_sql[begin_position:current_token.end_position]
+                current_token = self.lexer.get_current_token()
+            result += self.lexer.sql[begin_position:current_token.end_position]
             self.lexer.next_token()
             return result
 
@@ -49,7 +49,7 @@ class LexerEngine:
 
     def equal_any(self, *token_types):
         for each in token_types:
-            if self.lexer.get_current_token().token_type == each:
+            if self.lexer.get_current_token().token_type is each:
                 return True
         return False
 

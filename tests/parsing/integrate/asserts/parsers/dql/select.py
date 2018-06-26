@@ -194,7 +194,7 @@ parser_result_set = {
     "assertSelectIterator": {
         "parameters": (1, 2),
         "tables": [
-            {"name": "t_order_item"}
+            {"name": "t_order_item", "alias": "t"}
         ],
         "tokens":
             {
@@ -226,5 +226,173 @@ parser_result_set = {
         "order_by_columns": [
             {"owner": "i", "name": "item_id", "order_direction": "ASC"}
         ]
-    }
+    },
+    "assertSelectLikeWithCount": {
+        "parameters": ("'init'", 1, 2, 9, 10),
+        "tables": [
+            {"name": "t_order", "alias": "o"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "`t_order`", "begin_position": 37}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(1, 1), (2, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(3, 9), (4, 10)]}
+            ]
+        ],
+        "aggregation_select_items": [
+            {"type": "COUNT", "inner_expression": "(0)", "alias": "orders_count"}
+        ]
+    },
+    "assertSelectWithBindingTable": {
+        "parameters": (1, 2, 9, 10),
+        "tables": [
+            {"name": "t_order", "alias": "o"},
+            {"name": "t_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "t_order", "begin_position": 16},
+                {"original_literals": "t_order_item", "begin_position": 31}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "order_by_columns": [
+            {"owner": "i", "name": "item_id", "order_direction": "ASC"}
+        ]
+    },
+    "assertSelectWithBindingTableAndConfigTable": {
+        "parameters": (1, 2, 9, 10, 'init'),
+        "tables": [
+            {"name": "t_order", "alias": "o"},
+            {"name": "t_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "t_order", "begin_position": 16},
+                {"original_literals": "t_order_item", "begin_position": 31}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "order_by_columns": [
+            {"owner": "i", "name": "item_id", "order_direction": "ASC"}
+        ]
+    },
+    "assertSelectWithUpperCaseBindingTable": {
+        "parameters": (1, 2, 9, 10),
+        "tables": [
+            {"name": "T_ORDER", "alias": "o"},
+            {"name": "T_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "T_ORDER", "begin_position": 16},
+                {"original_literals": "T_order_item", "begin_position": 31}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "order_by_columns": [
+            {"owner": "i", "name": "item_id", "order_direction": "ASC"}
+        ]
+    },
+    "assertSelectWithUpperCaseBindingTableAndConfigTable": {
+        "parameters": (1, 2, 9, 10, 'init'),
+        "tables": [
+            {"name": "T_ORDER", "alias": "o"},
+            {"name": "T_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "T_ORDER", "begin_position": 34},
+                {"original_literals": "T_order_item", "begin_position": 49}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "order_by_columns": [
+            {"owner": "i", "name": "item_id", "order_direction": "ASC"}
+        ]
+    },
+    "assertSelectCountWithBindingTable": {
+        "parameters": (1, 2, 9, 10),
+        "tables": [
+            {"name": "t_order", "alias": "o"},
+            {"name": "t_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "t_order", "begin_position": 36},
+                {"original_literals": "t_order_item", "begin_position": 47}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "aggregation_select_items": [
+            {"type": "COUNT", "inner_expression": "(*)", "alias": "items_count"}
+        ]
+    },
+    "assertSelectCountWithBindingTableWithJoin": {
+        "parameters": (1, 2, 9, 10),
+        "tables": [
+            {"name": "t_order", "alias": "o"},
+            {"name": "t_order_item", "alias": "i"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "t_order", "begin_position": 36},
+                {"original_literals": "t_order_item", "begin_position": 51}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order", "column_name": "user_id", "operator": "IN", "values": [(0, 1), (1, 2)]},
+                {"table_name": "t_order", "column_name": "order_id", "operator": "BETWEEN", "values": [(2, 9), (3, 10)]}
+            ]
+        ],
+        "aggregation_select_items": [
+            {"type": "COUNT", "inner_expression": "(*)", "alias": "items_count"}
+        ]
+    },
+    "assertSelectAliasWithKeyword": {
+        "parameters": (1,),
+        "tables": [
+            {"name": "t_order_item", "alias": "length"}
+        ],
+        "tokens": {
+            "table_tokens": [
+                {"original_literals": "t_order_item", "begin_position": 36}
+            ]
+        },
+        "or_condition": [
+            [
+                {"table_name": "t_order_item", "column_name": "item_id", "operator": "EQUAL", "values": [(0, 1)]},
+            ]
+        ]
+    },
 }

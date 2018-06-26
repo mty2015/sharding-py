@@ -150,7 +150,7 @@ class AbstractSelectParser:
             if not self._is_contains_item(each, select_statement):
                 alias = alias_pattern % derived_column_offset
                 each.alias = alias
-                items_token.items.append(each.get_qualified_name() + " AS " + alias)
+                items_token.items.append(each.get_qualified_name() + " AS " + alias + " ")
 
     def _is_contains_item(self, order_item, select_statement):
         if order_item.index != -1:

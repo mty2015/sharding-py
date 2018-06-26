@@ -109,7 +109,8 @@ class SelectListClauseParser:
         while self.lexer_engine.equal_any(*Symbol.operators()):
             result += self.lexer_engine.get_current_token().literals
             self.lexer_engine.next_token()
-            result += self._parse_common_or_star_select_item(select_statement)
+            select_item = self._parse_common_or_star_select_item(select_statement)
+            result += select_item.expression
         return result
 
 
@@ -445,20 +446,20 @@ class OrderByClauseParser:
 
         if isinstance(sql_expr, SQLNumberExpression):
             return OrderItem(None, None, order_by_type, OrderDirection.ASC, None, sql_expr.number)
+        if isinstance(sql_expr, SQLIdentifierExpression):
+            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+                             order_by_type, OrderDirection.ASC,
+                             select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         if isinstance(sql_expr, SQLPropertyExpression):
             return OrderItem(sqlutil.get_exactly_value(sql_expr.owner.name),
                              sqlutil.get_exactly_value(sql_expr.name), order_by_type, OrderDirection.ASC,
                              select_statement.get_alias(
                                  sqlutil.get_exactly_value(sql_expr.owner.name) + '.' + sqlutil.get_exactly_value(
                                      sql_expr.name)))
-        if isinstance(sql_expr, SQLIdentifierExpression):
-            return OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
-                             order_by_type, OrderDirection.ASC,
-                             select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         if isinstance(sql_expr, SQLIgnoreExpression):
             return OrderItem(None, sqlutil.get_exactly_value(sql_expr.expression),
                              order_by_type, OrderDirection.ASC,
-                             select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
+                             select_statement.get_alias(sql_expr.expression))
         raise SQLParsingException(self.lexer_engine)
 
 

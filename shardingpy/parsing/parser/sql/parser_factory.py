@@ -6,7 +6,7 @@ from shardingpy.parsing.parser.sql.dql import select
 class SQLParserFactory:
     @classmethod
     def new_instance(cls, db_type, token_type, sharding_rule, lexer_engine):
-        if token_type == DefaultKeyword.SELECT:
+        if token_type is DefaultKeyword.SELECT:
             return select.new_select_parser(db_type, sharding_rule, lexer_engine)
         # elif token_type == DefaultKeyword.Insert:
         #     return InsertParserFactory.new_instance(db_type, sharding_rule, lexer_engine)

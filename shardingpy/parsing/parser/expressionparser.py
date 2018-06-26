@@ -43,8 +43,9 @@ class AliasExpressionParser:
     def parse_select_item_alias(self):
         if self.lexer_engine.skip_if_equal(DefaultKeyword.AS):
             return self._parse_with_as()
-        if self.lexer_engine.equal_any(self.get_default_available_keywords_for_select_item_alias().extend(
-                self.get_customized_available_keywords_for_select_item_alias())):
+        if self.lexer_engine.equal_any(
+                *self.get_default_available_keywords_for_select_item_alias()) or self.lexer_engine.equal_any(
+            *self.get_customized_available_keywords_for_select_item_alias()):
             return self._parse_alias()
 
     def _parse_with_as(self):
@@ -78,7 +79,7 @@ class AliasExpressionParser:
             return self._parse_with_as()
         if self.lexer_engine.equal_any(
                 *self.get_default_available_keywords_for_table_alias()) or self.lexer_engine.equal_any(
-                *self.get_customized_available_keywords_for_table_alias()):
+            *self.get_customized_available_keywords_for_table_alias()):
             return self._parse_alias()
 
     def get_default_available_keywords_for_table_alias(self):
@@ -124,7 +125,7 @@ class BasicExpressionParser:
             self._skip_rest_composite_expression(sql_statement)
             return SQLIgnoreExpression(self.lexer_engine.get_sql()[
                                        begin_position:self.lexer_engine.get_current_token().end_position - len(
-                                           self.lexer_engine.get_current_token().literals)])
+                                           self.lexer_engine.get_current_token().literals)].strip())
         return SQLIgnoreExpression(self.lexer_engine.get_sql()[
                                    begin_position:self.lexer_engine.get_current_token().end_position]) if self._skip_if_composite_expression(
             sql_statement) else expression
