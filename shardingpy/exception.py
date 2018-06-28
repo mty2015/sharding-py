@@ -1,6 +1,5 @@
 """
 """
-from shardingpy.parsing import lexer
 
 
 class ShardingJdbcException(Exception):
@@ -15,7 +14,7 @@ class SQLParsingException(ShardingJdbcException):
         if len(args) == 1:
             if isinstance(args[0], str):
                 super().__init__(args[0])
-            elif isinstance(args[0], lexer.LexerEngine):
+            else:
                 super().__init__(self.TOKEN_ERROR_MESSAGE.format(args[0].get_current_token().token_type,
                                                                  args[0].get_current_token().literals))
         elif len(args) == 2:

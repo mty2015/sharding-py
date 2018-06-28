@@ -398,12 +398,12 @@ class GroupByClauseParser:
                                    order_by_type, OrderDirection.ASC,
                                    select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.name)))
         elif isinstance(sql_expr, SQLIgnoreExpression):
-            order_item = OrderItem(None, sqlutil.get_exactly_value(sql_expr.name),
+            order_item = OrderItem(None, sql_expr.expression,
                                    order_by_type, OrderDirection.ASC,
-                                   select_statement.get_alias(sqlutil.get_exactly_value(sql_expr.expression)))
+                                   select_statement.get_alias(sql_expr.expression))
         else:
             return
-        select_statement.group_by_items.add(order_item)
+        select_statement.group_by_items.append(order_item)
 
     def get_unsupported_keyword_before_group_by_item(self):
         return []

@@ -321,7 +321,7 @@ class ItemAssert:
         aggregation_select_items = [each for each in actual if type(each) == AggregationSelectItem]
         self.test_case.assertEqual(len(aggregation_select_items), len(expected),
                                    self.message_helper('aggregation select items size error: '))
-        for each1, each2 in zip(actual, expected):
+        for each1, each2 in zip(aggregation_select_items, expected):
             self.assert_aggregation_select_item(each1, each2)
 
     def assert_aggregation_select_item(self, actual, expected):
@@ -393,10 +393,10 @@ class LimitAssert:
             return
         if self.sql_case_type == SQLCaseType.Placeholder:
             if actual.offset:
-                self.test_case.assertEqual(actual.offset.index, expected.get('offset_parameter_index'),
+                self.test_case.assertEqual(actual.offset.index, expected.get('offset_index'),
                                            self.message_helper('Limit offset index assertion error: '))
             if actual.row_count:
-                self.test_case.assertEqual(actual.row_count.index, expected.get('row_count_parameter_index'),
+                self.test_case.assertEqual(actual.row_count.index, expected.get('row_count_index'),
                                            self.message_helper('Limit row count index assertion error: '))
         else:
             if actual.offset:

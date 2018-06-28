@@ -10,4 +10,4 @@ class Limit:
     def __init__(self, database_type, offset, row_count):
         self.database_type = database_type
         self.offset = offset
-        self.raw_count = row_count
+        self.row_count = row_count

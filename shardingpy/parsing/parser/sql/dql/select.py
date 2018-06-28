@@ -125,7 +125,7 @@ class AbstractSelectParser:
         self._append_avg_derived_columns(items_token, select_statement)
         self._append_derived_order_columns(items_token, select_statement.order_by_items, self.ORDER_BY_DERIVED_ALIAS,
                                            select_statement)
-        self._append_derived_order_columns(items_token, select_statement.group_by_items, self.ORDER_BY_DERIVED_ALIAS,
+        self._append_derived_order_columns(items_token, select_statement.group_by_items, self.GROUP_BY_DERIVED_ALIAS,
                                            select_statement)
         if items_token.items:
             select_statement.sql_tokens.append(items_token)
@@ -185,4 +185,4 @@ class AbstractSelectParser:
     def _append_derived_order_by(self, select_statement):
         if select_statement.group_by_items and not select_statement.order_by_items:
             select_statement.order_by_items.extend(select_statement.group_by_items)
-            select_statement.sql_tokens.append(OrderByToken(select_statement.select_list_last_position))
+            select_statement.sql_tokens.append(OrderByToken(select_statement.group_by_last_position))

@@ -70,7 +70,7 @@ class LexerEngine:
             self.lexer.next_token()
 
     def unsupported_if_equal(self, *token_types):
-        if self.equal_any(token_types):
+        if self.equal_any(*token_types):
             raise SQLParsingUnsupportedException(self.lexer.get_current_token().token_type)
 
     def get_database_type(self):

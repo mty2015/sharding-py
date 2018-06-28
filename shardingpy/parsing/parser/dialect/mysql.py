@@ -104,7 +104,7 @@ class MySQLLimitClauseParser:
         if not self.lexer_engine.skip_if_equal(MySQLKeyword.LIMIT):
             return
         value_index = -1
-        value_begin_position = self.lexer_engine.get_current_token().end_postion
+        value_begin_position = self.lexer_engine.get_current_token().end_position
         is_paramter_for_value = False
         if self.lexer_engine.equal_any(Literals.INT):
             value = int(self.lexer_engine.get_current_token().literals)
@@ -174,14 +174,14 @@ class MySQLLimitClauseParser:
         else:
             raise SQLParsingException(self.lexer_engine)
         self.lexer_engine.next_token()
-        if is_paramter_for_value:
-            select_satement.increase_parameters_index()
-        else:
-            select_satement.sql_tokens.append(RowCountToken(value_begin_position, value))
         if is_paramter_for_offset:
             select_satement.increase_parameters_index()
         else:
             select_satement.sql_tokens.append(OffsetToken(offset_begin_position, offset_value))
+        if is_paramter_for_value:
+            select_satement.increase_parameters_index()
+        else:
+            select_satement.sql_tokens.append(RowCountToken(value_begin_position, value))
         return Limit(DatabaseType.MySQL, LimitValue(offset_value, offset_index, True),
                      LimitValue(value, index, False))
 
