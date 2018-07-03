@@ -1,4 +1,5 @@
 from shardingpy.api.config.base import TableRuleConfiguration
+from shardingpy.parsing.parser.context.condition import Column
 from shardingpy.routing.strategy.base import NoneShardingStrategy
 from shardingpy.keygen.base import DefaultKeyGenerator
 from shardingpy.util import strutil
@@ -74,6 +75,11 @@ class ShardingRule(object):
                 return True
 
         return False
+
+    def get_generate_key_column(self, logic_table_name):
+        for each in self.table_rules:
+            if strutil.equals_ignore_case(logic_table_name, each.logic_table and each.generate_key_column):
+                return Column(each.generate_key_column, logic_table_name)
 
 
 class ShardingDatasourceNames(object):

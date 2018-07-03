@@ -1,11 +1,11 @@
 import enum
 
-from shardingpy.exception import ShardingJdbcException
+from shardingpy.exception import ShardingException
 
 EOI = chr(0x1A)
 
 
-class UnterminatedCharException(ShardingJdbcException):
+class UnterminatedCharException(ShardingException):
     pass
 
 

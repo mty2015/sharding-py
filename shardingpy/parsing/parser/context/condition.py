@@ -109,3 +109,10 @@ class Conditions:
 class NullCondition(Condition):
     def __init__(self):
         super().__init__(None, None)
+
+
+class GeneratedKeyCondition(Condition):
+    def __init__(self, column, index, value):
+        super().__init__(column, ShardingOperator.EQUAL, SQLNumberExpression(value))
+        self.index = index
+        self.value = value

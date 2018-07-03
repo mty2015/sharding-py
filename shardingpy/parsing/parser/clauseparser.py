@@ -1,7 +1,9 @@
 from shardingpy.constant import AggregationType, ShardingOperator, OrderDirection
-from shardingpy.exception import UnsupportedOperationException, SQLParsingException
-from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
-from shardingpy.parsing.parser.context.condition import Column, Condition, OrCondition, AndCondition, NullCondition
+from shardingpy.exception import UnsupportedOperationException, SQLParsingException, ShardingException
+from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol, Assist
+from shardingpy.parsing.parser.context.condition import Column, Condition, OrCondition, AndCondition, NullCondition, \
+    GeneratedKeyCondition
+from shardingpy.parsing.parser.context.insertvalue import InsertValue
 from shardingpy.parsing.parser.context.others import OrderItem
 from shardingpy.parsing.parser.context.selectitem import StarSelectItem, AggregationSelectItem, CommonSelectItem
 from shardingpy.parsing.parser.context.table import Table
@@ -9,8 +11,8 @@ from shardingpy.parsing.parser.dialect.expression_parser_factory import create_a
     create_basic_expression_parser
 from shardingpy.parsing.parser.expressionparser import SQLPropertyExpression, SQLPlaceholderExpression, \
     SQLNumberExpression, SQLTextExpression, SQLIdentifierExpression, SQLIgnoreExpression
-from shardingpy.parsing.parser.token import TableToken
-from shardingpy.util import sqlutil
+from shardingpy.parsing.parser.token import TableToken, InsertColumnToken, ItemsToken, InsertValuesToken
+from shardingpy.util import sqlutil, strutil
 
 
 class DistinctClauseParser:
@@ -474,3 +476,147 @@ class SelectRestClauseParser:
 
     def get_unsupported_keywords_rest(self):
         return []
+
+
+class InsertIntoClauseParser:
+    def __init__(self, lexer_engine, table_references_clause_parser):
+        self.lexer_engine = lexer_engine
+        self.table_references_clause_parser = table_references_clause_parser
+
+    def parser(self, insert_statement):
+        self.lexer_engine.unsupported_if_equal(*self.get_unsupported_keywords_before_into())
+        self.lexer_engine.skip_until(DefaultKeyword.INTO)
+        self.lexer_engine.next_token()
+        self.table_references_clause_parser.parse(insert_statement, True)
+        self._skip_between_table_and_values(insert_statement)
+
+    def get_unsupported_keywords_before_into(self):
+        return []
+
+    def _skip_between_table_and_values(self, insert_statement):
+        while self.lexer_engine.skip_if_equal(*self.get_skipped_keywords_between_table_and_values()):
+            self.lexer_engine.next_token()
+            if self.lexer_engine.equal_any(Symbol.LEFT_PAREN):
+                self.lexer_engine.skip_parentheses(insert_statement)
+
+    def get_skipped_keywords_between_table_and_values(self):
+        return []
+
+
+class InsertColumnsClauseParser:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.sharding_rule = sharding_rule
+        self.lexer_engine = lexer_engine
+
+    def parse(self, insert_statement, sharding_meta_data):
+        result = list()
+        table_name = insert_statement.tables.get_single_table_name()
+        generated_key_column = self.sharding_rule.get_generate_key_column(table_name)
+        count = 0
+        if self.lexer_engine.equal_any(Symbol.LEFT_PAREN):
+            while True:
+                self.lexer_engine.next_token()
+                column_name = sqlutil.get_exactly_value(self.lexer_engine.get_current_token().literals)
+                result.append(Column(column_name, table_name))
+                self.lexer_engine.next_token()
+                if generated_key_column and strutil.equals_ignore_case(generated_key_column.name, column_name):
+                    insert_statement.generate_key_column_index = count
+                count += 1
+                if self.lexer_engine.equal_any(Symbol.RIGHT_PAREN) or self.lexer_engine.equal_any(Assist.END):
+                    break
+            insert_statement.columns_list_last_position = self.lexer_engine.get_current_token.end_position - len(
+                self.lexer_engine.get_current_token().literals)
+            self.lexer_engine.next_token()
+        else:
+            column_names = sharding_meta_data.table_meta_data_map.get(table_name).get_all_column_names()
+            begin_position = self.lexer_engine.get_current_token() - len(
+                self.lexer_engine.get_current_token().literals) - 1
+            insert_statement.sql_tokens.append(InsertColumnToken(begin_position, '('))
+            columns_token = ItemsToken(begin_position)
+            columns_token.is_first_of_items_special = True
+            for column_name in column_names:
+                result.append(Column(column_name, table_name))
+                if generated_key_column and strutil.equals_ignore_case(generated_key_column.name, column_name):
+                    insert_statement.generate_key_column_index = count
+                columns_token.items.append(column_name)
+                count += 1
+            insert_statement.sql_tokens.append(columns_token)
+            insert_statement.sql_tokens.append(InsertColumnToken(begin_position, ')'))
+            insert_statement.columns_list_last_position = begin_position
+        insert_statement.columns.extend(result)
+
+
+class InsertValuesClauseParser:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.sharding_rule = sharding_rule
+        self.lexer_engine = lexer_engine
+        self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
+
+    def get_synonymous_keywords_for_values(self):
+        return []
+
+    def parse(self, insert_statement):
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.VALUES, **self.get_synonymous_keywords_for_values()):
+            self._parse_values(insert_statement)
+
+    def _parse_values(self, insert_statement):
+        begin_position = self.lexer_engine.get_current_token().end_position - len(
+            self.lexer_engine.get_current_token().literals)
+        insert_statement.sql_tokens.append(
+            InsertValuesToken(begin_position, insert_statement.tables.get_single_table_name()))
+        while True:
+            begin_position = self.lexer_engine.get_current_token().end_position - len(
+                self.lexer_engine.get_current_token().literals)
+            self.lexer_engine.accept(Symbol.LEFT_PAREN)
+            sql_expressions = list()
+            columns_count = 0
+            while True:
+                sql_expressions.append(self.basic_expression_parser.parse(insert_statement))
+                self._skip_double_colon()
+                columns_count += 1
+                while not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                    break
+            self._remove_generate_key_column(insert_statement, columns_count)
+            columns_count = 0
+            paramters_count = 0
+            and_condition = AndCondition()
+            for each in insert_statement.columns:
+                sql_expression = sql_expressions[columns_count]
+                if self.sharding_rule.is_sharding_column(each):
+                    and_condition.conditions.append(Condition(each, sql_expression))
+                if insert_statement.generate_key_column_index == columns_count:
+                    insert_statement.generated_key_conditions.append(
+                        self._create_generate_key_condition(each, sql_expression))
+                columns_count += 1
+                if isinstance(sql_expression, SQLPlaceholderExpression):
+                    paramters_count += 1
+            end_position = self.lexer_engine.get_current_token().end_position
+            self.lexer_engine.accept(Symbol.RIGHT_PAREN)
+            insert_statement.insert_values.insert_values.append(
+                InsertValue(self.lexer_engine.get_sql()[begin_position: end_position], paramters_count))
+            insert_statement.conditions.or_condition.and_conditions.append(and_condition)
+            if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                break
+        insert_statement.insert_values_list_last_position = end_position
+
+    def _remove_generate_key_column(self, insert_statement, values_count):
+        generate_key_column = self.sharding_rule.get_generate_key_column(
+            insert_statement.tables.get_single_table_name())
+        if generate_key_column and values_count < len(insert_statement.columns):
+            insert_statement.columns.remove(
+                Column(generate_key_column.name, insert_statement.tables.get_single_table_name()))
+            for each in insert_statement.get_items_tokens():
+                each.items.remove(generate_key_column.name)
+                insert_statement.generate_key_column_index = -1
+
+    def _create_generate_key_condition(self, column, sql_expression):
+        if isinstance(sql_expression, SQLPlaceholderExpression):
+            return GeneratedKeyCondition(column, sql_expression.index, None)
+        elif isinstance(sql_expression, SQLNumberExpression):
+            return GeneratedKeyCondition(column, -1, sql_expression.number)
+        else:
+            raise ShardingException('Generated key only support number.')
+
+    def _skip_double_colon(self):
+        if self.lexer_engine.skip_if_equal(Symbol.DOUBLE_COLON):
+            self.lexer_engine.next_token()

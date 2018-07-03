@@ -2,11 +2,11 @@
 """
 
 
-class ShardingJdbcException(Exception):
+class ShardingException(Exception):
     pass
 
 
-class SQLParsingException(ShardingJdbcException):
+class SQLParsingException(ShardingException):
     TOKEN_ERROR_MESSAGE = "SQL syntax error, token is '{}', literals is '{}'."
     UNMATCH_MESSAGE = "SQL syntax error, expected token is {}, actual token is {}, literals is '{}'."
 
@@ -24,14 +24,14 @@ class SQLParsingException(ShardingJdbcException):
                                             _lexer.get_current_token().literals))
 
 
-class SQLParsingUnsupportedException(ShardingJdbcException):
+class SQLParsingUnsupportedException(ShardingException):
     def __init__(self, token_type):
         super().__init__("Not supported token {}".format(token_type))
 
 
-class UnsupportedOperationException(ShardingJdbcException):
+class UnsupportedOperationException(ShardingException):
     pass
 
 
-class ShardingConfigurationException(ShardingJdbcException):
+class ShardingConfigurationException(ShardingException):
     pass
