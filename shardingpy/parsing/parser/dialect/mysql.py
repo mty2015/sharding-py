@@ -3,7 +3,7 @@ from shardingpy.exception import SQLParsingException
 from shardingpy.parsing.lexer.dialect.mysql import MySQLKeyword
 from shardingpy.parsing.lexer.token import DefaultKeyword, Literals, Symbol
 from shardingpy.parsing.parser.clauseparser import DistinctClauseParser, InsertIntoClauseParser, \
-    InsertColumnsClauseParser, InsertValuesClauseParser
+    InsertColumnsClauseParser, InsertValuesClauseParser, InsertSetClauseParser, InsertDuplicateKeyUpdateClauseParser
 from shardingpy.parsing.parser.clauseparser import SelectListClauseParser, TableReferencesClauseParser, \
     WhereClauseParser, GroupByClauseParser, HavingClauseParser, OrderByClauseParser, SelectRestClauseParser
 from shardingpy.parsing.parser.context.limit import Limit, LimitValue
@@ -201,6 +201,9 @@ class MySQLInsertClauseParserFacade:
         self.insert_into_clause_parser = MySQLInsertIntoClauseParser(sharding_rule, lexer_engine)
         self.insert_columns_clause_parser = InsertColumnsClauseParser(sharding_rule, lexer_engine)
         self.insert_values_clause_parser = MySQLInsertValuesClauseParser(sharding_rule, lexer_engine)
+        self.insert_set_clause_parser = MySQLInsertSetClauseParser(sharding_rule, lexer_engine)
+        self.insert_duplicate_key_update_clause_parser = MySQLInsertDuplicateKeyUpateClauseParser(sharding_rule,
+                                                                                                  lexer_engine)
 
 
 class MySQLInsertParser(AbstractInsertParser):
@@ -220,3 +223,13 @@ class MySQLInsertIntoClauseParser(InsertIntoClauseParser):
 class MySQLInsertValuesClauseParser(InsertValuesClauseParser):
     def get_synonymous_keywords_for_values(self):
         return [MySQLKeyword.VALUE]
+
+
+class MySQLInsertSetClauseParser(InsertSetClauseParser):
+    def get_customized_insert_keywords(self):
+        return [DefaultKeyword.SET]
+
+
+class MySQLInsertDuplicateKeyUpateClauseParser(InsertDuplicateKeyUpdateClauseParser):
+    def get_customized_insert_keywords(self):
+        return [DefaultKeyword.ON]

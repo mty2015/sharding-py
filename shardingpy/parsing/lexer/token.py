@@ -522,6 +522,9 @@ class DefaultKeyword(enum.IntEnum):
     CHECK = 905
     REFERENCE = 906
 
+    # Others
+    DUPLICATE = 1000
+
 
 class Assist(enum.IntEnum):
     END = 1

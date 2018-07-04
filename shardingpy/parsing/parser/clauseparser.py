@@ -620,3 +620,46 @@ class InsertValuesClauseParser:
     def _skip_double_colon(self):
         if self.lexer_engine.skip_if_equal(Symbol.DOUBLE_COLON):
             self.lexer_engine.next_token()
+
+
+class InsertSetClauseParser:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.sharding_rule = sharding_rule
+        self.lexer_engine = lexer_engine
+        self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
+
+    def parse(self, insert_statement):
+        if not self.lexer_engine.skip_if_equal(*self.get_customized_insert_keywords()):
+            return
+
+        raise NotImplementedError('not support "insert clause with set values"')
+
+    def get_customized_insert_keywords(self):
+        return []
+
+
+class InsertDuplicateKeyUpdateClauseParser:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.sharding_rule = sharding_rule
+        self.lexer_engine = lexer_engine
+
+    def parse(self, insert_statement):
+        if not self.lexer_engine.skip_if_equal(*self.get_customized_insert_keywords()):
+            return
+
+        self.lexer_engine.accept(DefaultKeyword.DUPLICATE)
+        self.lexer_engine.accept(DefaultKeyword.KEY)
+        self.lexer_engine.accept(DefaultKeyword.UPDATE)
+        while True:
+            column = Column(self.lexer_engine.get_current_token().literals,
+                            insert_statement.tables.get_single_table_name()())
+            if self.sharding_rule.is_sharding_column(column):
+                raise SQLParsingException(
+                    'INSERT INTO .... ON DUPLICATE KEY UPDATE can not support on sharding column: {}'.format(
+                        column.name))
+            self.lexer_engine.skip_until(Symbol.COMMA, Assist.END)
+            if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                break
+
+    def get_customized_insert_keywords(self):
+        return []
