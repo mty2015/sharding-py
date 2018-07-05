@@ -63,7 +63,7 @@ class GeneratedKeyToken(SQLToken):
 class InsertValuesToken(SQLToken):
     def __init__(self, begin_position, table_name):
         super().__init__(begin_position)
-        self._table_name = table_name
+        self.table_name = table_name
 
 
 class InsertColumnToken(SQLToken):

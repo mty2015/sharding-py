@@ -16,4 +16,4 @@ class SQLParsingEngine:
         lexer_engine = LexerEngineFactory.new_instance(self.db_type, self.sql)
         lexer_engine.next_token()
         return SQLParserFactory.new_instance(self.db_type, lexer_engine.get_current_token().token_type,
-                                             self.sharding_rule, lexer_engine).parse()
+                                             self.sharding_rule, lexer_engine, self.sharding_meta_data).parse()

@@ -176,7 +176,8 @@ class InsertValuesTokenAssert:
                                        expected.get('insert_values_token', {}).get('begin_position'),
                                        self.message_helper('Insert values token begin position assertion error: '))
             self.test_case.assertEqual(insert_value_token.table_name,
-                                       expected.get('insert_values_token', {}).get('table_name'))
+                                       expected.get('insert_values_token', {}).get('table_name'),
+                                       self.message_helper('Insert values table name assertion error: '))
         else:
             self.test_case.assertFalse(expected.get('insert_values_token'),
                                        self.message_helper('Insert values token should not exist: '))

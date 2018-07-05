@@ -19,7 +19,7 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
             self.assert_supported_sql(sql_case_id, database_type, sql_case_type)
 
     def test_one(self):
-        self.assert_supported_sql('assertSelectCountWithoutGroupedColumn', DatabaseType.MySQL, SQLCaseType.Literal)
+        self.assert_supported_sql('assertInsertWithAllPlaceholders', DatabaseType.MySQL, SQLCaseType.Literal)
 
     def assert_supported_sql(self, sql_case_id, database_type, sql_case_type):
         print("test: {} - {} - {}".format(sql_case_id, database_type.name, sql_case_type.name))

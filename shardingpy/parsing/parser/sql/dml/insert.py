@@ -1,9 +1,17 @@
-from shardingpy.constant import SQLType
+from shardingpy.constant import SQLType, DatabaseType
 from shardingpy.exception import UnsupportedOperationException
 from shardingpy.parsing.lexer.token import DefaultKeyword, Symbol
 from shardingpy.parsing.parser.context.insertvalue import InsertValues
 from shardingpy.parsing.parser.sql import SQLStatement
 from shardingpy.parsing.parser.token import ItemsToken
+
+
+def new_insert_parser(db_type, sharding_rule, lexer_engine, sharding_meta_data):
+    if db_type == DatabaseType.MySQL:
+        from shardingpy.parsing.parser.dialect.mysql import MySQLInsertParser
+        return MySQLInsertParser(sharding_rule, lexer_engine, sharding_meta_data)
+    else:
+        raise UnsupportedOperationException("Cannot support database {}".format(db_type))
 
 
 class InsertStatement(SQLStatement):
@@ -31,12 +39,12 @@ class AbstractInsertParser:
         self.lexer_engine.next_token()
         result = InsertStatement()
         self.insert_clause_parser_facade.insert_into_clause_parser.parse(result)
-        self.insert_clause_parser_facade.insert_columns_clause_parser(result, self.sharding_meta_data)
+        self.insert_clause_parser_facade.insert_columns_clause_parser.parse(result, self.sharding_meta_data)
         if self.lexer_engine.equal_any(DefaultKeyword.SELECT, Symbol.LEFT_PAREN):
             raise UnsupportedOperationException('Cannot INSERT SELECT')
         self.insert_clause_parser_facade.insert_values_clause_parser.parse(result)
         self.insert_clause_parser_facade.insert_set_clause_parser.parse(result)
-        self.insert_duplicate_key_update_clause_parser.parse(result)
+        self.insert_clause_parser_facade.insert_duplicate_key_update_clause_parser.parse(result)
         self._process_generated_key(result)
         return result
 

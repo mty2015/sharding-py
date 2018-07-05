@@ -483,7 +483,7 @@ class InsertIntoClauseParser:
         self.lexer_engine = lexer_engine
         self.table_references_clause_parser = table_references_clause_parser
 
-    def parser(self, insert_statement):
+    def parse(self, insert_statement):
         self.lexer_engine.unsupported_if_equal(*self.get_unsupported_keywords_before_into())
         self.lexer_engine.skip_until(DefaultKeyword.INTO)
         self.lexer_engine.next_token()
@@ -524,7 +524,7 @@ class InsertColumnsClauseParser:
                 count += 1
                 if self.lexer_engine.equal_any(Symbol.RIGHT_PAREN) or self.lexer_engine.equal_any(Assist.END):
                     break
-            insert_statement.columns_list_last_position = self.lexer_engine.get_current_token.end_position - len(
+            insert_statement.columns_list_last_position = self.lexer_engine.get_current_token().end_position - len(
                 self.lexer_engine.get_current_token().literals)
             self.lexer_engine.next_token()
         else:
@@ -556,7 +556,7 @@ class InsertValuesClauseParser:
         return []
 
     def parse(self, insert_statement):
-        if self.lexer_engine.skip_if_equal(DefaultKeyword.VALUES, **self.get_synonymous_keywords_for_values()):
+        if self.lexer_engine.skip_if_equal(DefaultKeyword.VALUES, *self.get_synonymous_keywords_for_values()):
             self._parse_values(insert_statement)
 
     def _parse_values(self, insert_statement):
@@ -574,7 +574,7 @@ class InsertValuesClauseParser:
                 sql_expressions.append(self.basic_expression_parser.parse(insert_statement))
                 self._skip_double_colon()
                 columns_count += 1
-                while not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
                     break
             self._remove_generate_key_column(insert_statement, columns_count)
             columns_count = 0
@@ -583,7 +583,7 @@ class InsertValuesClauseParser:
             for each in insert_statement.columns:
                 sql_expression = sql_expressions[columns_count]
                 if self.sharding_rule.is_sharding_column(each):
-                    and_condition.conditions.append(Condition(each, sql_expression))
+                    and_condition.conditions.append(Condition(each, ShardingOperator.EQUAL, sql_expression))
                 if insert_statement.generate_key_column_index == columns_count:
                     insert_statement.generated_key_conditions.append(
                         self._create_generate_key_condition(each, sql_expression))

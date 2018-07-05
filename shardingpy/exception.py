@@ -26,7 +26,7 @@ class SQLParsingException(ShardingException):
 
 class SQLParsingUnsupportedException(ShardingException):
     def __init__(self, token_type):
-        super().__init__("Not supported token {}".format(token_type))
+        super().__init__("Not supported token {}".format(token_type.name))
 
 
 class UnsupportedOperationException(ShardingException):

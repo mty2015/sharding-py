@@ -196,8 +196,6 @@ class MySQLSelectRestClauseParser(SelectRestClauseParser):
 
 class MySQLInsertClauseParserFacade:
     def __init__(self, sharding_rule, lexer_engine):
-        self.sharding_rule = sharding_rule
-        self.lexer_engine = lexer_engine
         self.insert_into_clause_parser = MySQLInsertIntoClauseParser(sharding_rule, lexer_engine)
         self.insert_columns_clause_parser = InsertColumnsClauseParser(sharding_rule, lexer_engine)
         self.insert_values_clause_parser = MySQLInsertValuesClauseParser(sharding_rule, lexer_engine)
