@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from shardingpy.api.algorithm.sharding.values import ListShardingValue, RangeShardingValue
 from shardingpy.constant import ShardingOperator
@@ -70,7 +70,10 @@ class AndCondition(object):
         self.conditions = list()
 
     def get_conditions_map(self):
-        pass
+        result = defaultdict(list)
+        for each in self.conditions:
+            result[each.column].append(each)
+        return result
 
     def optimize(self):
         result = AndCondition()
@@ -87,6 +90,7 @@ class OrCondition(object):
             self.add(condition)
 
     def add(self, condition):
+        assert isinstance(condition, Condition)
         if len(self.and_conditions) == 0:
             self.and_conditions.append(AndCondition())
         self.and_conditions[0].conditions.append(condition)
