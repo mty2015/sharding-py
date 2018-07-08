@@ -3,12 +3,15 @@ from shardingpy.exception import SQLParsingException
 from shardingpy.parsing.lexer.dialect.mysql import MySQLKeyword
 from shardingpy.parsing.lexer.token import DefaultKeyword, Literals, Symbol
 from shardingpy.parsing.parser.clauseparser import DistinctClauseParser, InsertIntoClauseParser, \
-    InsertColumnsClauseParser, InsertValuesClauseParser, InsertSetClauseParser, InsertDuplicateKeyUpdateClauseParser
+    InsertColumnsClauseParser, InsertValuesClauseParser, InsertSetClauseParser, InsertDuplicateKeyUpdateClauseParser, \
+    UpdateSetItemsClauseParser
 from shardingpy.parsing.parser.clauseparser import SelectListClauseParser, TableReferencesClauseParser, \
     WhereClauseParser, GroupByClauseParser, HavingClauseParser, OrderByClauseParser, SelectRestClauseParser
 from shardingpy.parsing.parser.context.limit import Limit, LimitValue
 from shardingpy.parsing.parser.expressionparser import AliasExpressionParser
+from shardingpy.parsing.parser.sql.dml.delete import AbstractDeleteParser
 from shardingpy.parsing.parser.sql.dml.insert import AbstractInsertParser
+from shardingpy.parsing.parser.sql.dml.update import AbstractUpdateParser
 from shardingpy.parsing.parser.sql.dql.select import AbstractSelectParser
 from shardingpy.parsing.parser.token import OffsetToken, RowCountToken
 
@@ -231,3 +234,32 @@ class MySQLInsertSetClauseParser(InsertSetClauseParser):
 class MySQLInsertDuplicateKeyUpateClauseParser(InsertDuplicateKeyUpdateClauseParser):
     def get_customized_insert_keywords(self):
         return [DefaultKeyword.ON]
+
+
+class MySQLUpdateClauseParserFacade:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.table_references_clause_parser = MySQLTableReferencesClauseParser(sharding_rule, lexer_engine)
+        self.update_set_items_clause_parser = UpdateSetItemsClauseParser(lexer_engine)
+        self.where_clause_parser = MySQLWhereClauseParser(lexer_engine)
+
+
+class MySQLUpdateParser(AbstractUpdateParser):
+    def __init__(self, sharding_rule, lexer_engine):
+        super().__init__(sharding_rule, lexer_engine, MySQLUpdateClauseParserFacade(sharding_rule, lexer_engine))
+
+    def get_skipped_keywords_between_update_and_table(self):
+        return [MySQLKeyword.LOW_PRIORITY, MySQLKeyword.IGNORE]
+
+
+class MySQLDeleteClauseParserFacade:
+    def __init__(self, sharding_rule, lexer_engine):
+        self.table_references_clause_parser = MySQLTableReferencesClauseParser(sharding_rule, lexer_engine)
+        self.where_clause_parser = MySQLWhereClauseParser(lexer_engine)
+
+
+class MySQLDeleteParser(AbstractDeleteParser):
+    def __init__(self, sharding_rule, lexer_engine):
+        super().__init__(sharding_rule, lexer_engine, MySQLDeleteClauseParserFacade(sharding_rule, lexer_engine))
+
+    def get_skipped_keywords_between_delete_and_table(self):
+        return [MySQLKeyword.LOW_PRIORITY, MySQLKeyword.QUICK, MySQLKeyword.IGNORE, DefaultKeyword.FROM]

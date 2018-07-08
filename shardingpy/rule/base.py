@@ -78,7 +78,7 @@ class ShardingRule(object):
 
     def get_generate_key_column(self, logic_table_name):
         for each in self.table_rules:
-            if strutil.equals_ignore_case(logic_table_name, each.logic_table and each.generate_key_column):
+            if strutil.equals_ignore_case(logic_table_name, each.logic_table) and each.generate_key_column:
                 return Column(each.generate_key_column, logic_table_name)
 
 
@@ -111,7 +111,7 @@ class TableRule(object):
             table_rule_configuration.database_strategy_config) if table_rule_configuration.database_strategy_config else None
         self.table_sharding_strategy = get_sharding_strategy(
             table_rule_configuration.table_strategy_config) if table_rule_configuration.table_strategy_config else None
-        self.generate_key_column = table_rule_configuration.key_generator_name
+        self.generate_key_column = table_rule_configuration.key_generator_column_name
         self.key_generator = table_rule_configuration.key_generator
         self.logic_index = table_rule_configuration.logic_index.lower() if table_rule_configuration.logic_index else None
 

@@ -270,7 +270,7 @@ parser_result_set = {
         ]
     },
     "assertSelectWithBindingTableAndConfigTable": {
-        "parameters": (1, 2, 9, 10, 'init'),
+        "parameters": (1, 2, 9, 10, "'init'"),
         "tables": [
             {"name": "t_order", "alias": "o"},
             {"name": "t_order_item", "alias": "i"}
@@ -314,7 +314,7 @@ parser_result_set = {
         ]
     },
     "assertSelectWithUpperCaseBindingTableAndConfigTable": {
-        "parameters": (1, 2, 9, 10, 'init'),
+        "parameters": (1, 2, 9, 10, "'init'"),
         "tables": [
             {"name": "T_ORDER", "alias": "o"},
             {"name": "T_order_item", "alias": "i"}

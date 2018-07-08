@@ -32,8 +32,7 @@ sharding_rule_config = {
                         'sharding_columns': ['user_new_id', 'guid'],
                         'algorithm_class_name': 'tests.api.algorithm.fixture.TestComplexKeysShardingAlgorithm'
                     }
-                },
-                'key_generator_column_name': 'item_id'
+                }
             }
         },
         'binding_tables': [('t_order', 't_order_item')],

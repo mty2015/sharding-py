@@ -1,6 +1,6 @@
 from shardingpy.exception import SQLParsingUnsupportedException
 from shardingpy.parsing.lexer.token import DefaultKeyword
-from shardingpy.parsing.parser.sql.dml import insert
+from shardingpy.parsing.parser.sql.dml import insert, update, delete
 from shardingpy.parsing.parser.sql.dql import select
 
 
@@ -12,8 +12,8 @@ class SQLParserFactory:
         elif token_type is DefaultKeyword.INSERT:
             return SQLParserFactory._get_dml_parser(db_type, token_type, sharding_rule, lexer_engine,
                                                     sharding_meta_data)
-        # elif token_type == DefaultKeyword.UPDATE:
-        #     return UpdateParserFactory.new_instance(db_type, sharding_rule, lexer_engine)
+        elif token_type in [DefaultKeyword.UPDATE, DefaultKeyword.INSERT, DefaultKeyword.DELETE]:
+            return SQLParserFactory._get_dml_parser(db_type, token_type, sharding_rule, lexer_engine, sharding_meta_data)
         # elif token_type == DefaultKeyword.DELETE:
         #     return DeleteParserFactory.new_instance(db_type, sharding_rule, lexer_engine)
         # elif token_type == DefaultKeyword.CREATE:
@@ -31,3 +31,8 @@ class SQLParserFactory:
     def _get_dml_parser(db_type, token_type, sharding_rule, lexer_engine, sharding_meta_data):
         if token_type is DefaultKeyword.INSERT:
             return insert.new_insert_parser(db_type, sharding_rule, lexer_engine, sharding_meta_data)
+        elif token_type is DefaultKeyword.UPDATE:
+            return update.new_update_parser(db_type, sharding_rule, lexer_engine)
+        elif token_type is DefaultKeyword.DELETE:
+            return delete.new_delete_parser(db_type, sharding_rule, lexer_engine)
+

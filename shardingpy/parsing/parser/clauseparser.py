@@ -529,7 +529,7 @@ class InsertColumnsClauseParser:
             self.lexer_engine.next_token()
         else:
             column_names = sharding_meta_data.table_meta_data_map.get(table_name).get_all_column_names()
-            begin_position = self.lexer_engine.get_current_token() - len(
+            begin_position = self.lexer_engine.get_current_token().end_position - len(
                 self.lexer_engine.get_current_token().literals) - 1
             insert_statement.sql_tokens.append(InsertColumnToken(begin_position, '('))
             columns_token = ItemsToken(begin_position)
@@ -652,7 +652,7 @@ class InsertDuplicateKeyUpdateClauseParser:
         self.lexer_engine.accept(DefaultKeyword.UPDATE)
         while True:
             column = Column(self.lexer_engine.get_current_token().literals,
-                            insert_statement.tables.get_single_table_name()())
+                            insert_statement.tables.get_single_table_name())
             if self.sharding_rule.is_sharding_column(column):
                 raise SQLParsingException(
                     'INSERT INTO .... ON DUPLICATE KEY UPDATE can not support on sharding column: {}'.format(
@@ -663,3 +663,42 @@ class InsertDuplicateKeyUpdateClauseParser:
 
     def get_customized_insert_keywords(self):
         return []
+
+
+class UpdateSetItemsClauseParser:
+    def __init__(self, lexer_engine):
+        self.lexer_engine = lexer_engine
+        self.basic_expression_parser = create_basic_expression_parser(lexer_engine)
+
+    def parse(self, update_statement):
+        self.lexer_engine.accept(DefaultKeyword.SET)
+        while True:
+            self._parse_set_item(update_statement)
+            if not self.lexer_engine.skip_if_equal(Symbol.COMMA):
+                break
+
+    def _parse_set_item(self, update_statement):
+        self._parse_set_column(update_statement)
+        self.lexer_engine.skip_if_equal(Symbol.EQ, Symbol.COLON_EQ)
+        self._parse_set_value(update_statement)
+        self._skip_double_colon()
+
+    def _parse_set_column(self, update_statement):
+        if self.lexer_engine.equal_any(Symbol.LEFT_PAREN):
+            self.lexer_engine.skip_parentheses(update_statement)
+            return
+        begin_position = self.lexer_engine.get_current_token().end_position
+        literals = self.lexer_engine.get_current_token().literals
+        self.lexer_engine.next_token()
+        if self.lexer_engine.skip_if_equal(Symbol.DOT):
+            if strutil.equals_ignore_case(update_statement.tables.get_single_table_name(),
+                                          sqlutil.get_exactly_value(literals)):
+                update_statement.sql_tokens.append(TableToken(begin_position - len(literals), 0, literals))
+            self.lexer_engine.next_token()
+
+    def _parse_set_value(self, update_statement):
+        self.basic_expression_parser.parse(update_statement)
+
+    def _skip_double_colon(self):
+        if self.lexer_engine.skip_if_equal(Symbol.DOUBLE_COLON):
+            self.lexer_engine.next_token()

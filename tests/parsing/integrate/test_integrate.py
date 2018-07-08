@@ -19,7 +19,7 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
             self.assert_supported_sql(sql_case_id, database_type, sql_case_type)
 
     def test_one(self):
-        self.assert_supported_sql('assertInsertWithAllPlaceholders', DatabaseType.MySQL, SQLCaseType.Literal)
+        self.assert_supported_sql('assertUpdateWithAlias', DatabaseType.MySQL, SQLCaseType.Literal)
 
     def assert_supported_sql(self, sql_case_id, database_type, sql_case_type):
         print("test: {} - {} - {}".format(sql_case_id, database_type.name, sql_case_type.name))
@@ -36,6 +36,7 @@ class IntegrateSupportedSQLParsingTestCase(unittest.TestCase):
     def get_sharding_meta_data(self):
         sharding_meta_data = ShardingMetaData()
         table_meta_data_map = dict()
+        sharding_meta_data.table_meta_data_map = table_meta_data_map
         table_meta_data_map['t_order'] = self.get_table_meta_data(['order_id', 'user_id'])
         table_meta_data_map['t_order_item'] = self.get_table_meta_data(
             ['item_id', 'order_id', 'user_id', 'status', 'c_date'])

@@ -1,4 +1,6 @@
 from shardingpy.util.reflectionutil import load_class_for_name
+
+
 class ShardingRuleConfiguration(object):
     def __init__(self):
         self.default_data_source_name = None
@@ -18,7 +20,7 @@ class TableRuleConfiguration(object):
         self.actual_data_nodes = None
         self.database_strategy_config = None
         self.table_strategy_config = None
-        self.key_generator_name = None
+        self.key_generator_column_name = None
         self.key_generator = None
         self.logic_index = None
 
@@ -64,7 +66,7 @@ def load_table_rule_configs(cfg):
         table_rule_config.actual_data_nodes = _table_rule_config['actual_data_nodes']
         table_rule_config.database_strategy_config = load_strategy_config(_table_rule_config.get('database_strategy'))
         table_rule_config.table_strategy_config = load_strategy_config(_table_rule_config.get('table_strategy'))
-        table_rule_config.key_generator_name = _table_rule_config.get('key_generator_name')
+        table_rule_config.key_generator_column_name = _table_rule_config.get('key_generator_column_name')
         table_rule_config.key_generator = _table_rule_config.get('key_generator')
         table_rule_config.logic_index = _table_rule_config.get('logic_index')
         table_rule_configs.append(table_rule_config)
