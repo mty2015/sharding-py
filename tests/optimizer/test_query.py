@@ -2,7 +2,7 @@ import unittest
 
 from shardingpy.api.algorithm.sharding.values import ListShardingValue, RangeShardingValue
 from shardingpy.constant import ShardingOperator
-from shardingpy.optimizer.query import QueryOptimizeEngine
+from shardingpy.optimizer.query_optimizer import QueryOptimizeEngine
 from shardingpy.parsing.parser.context.condition import Condition, Column, AndCondition, OrCondition
 from shardingpy.parsing.parser.expressionparser import SQLNumberExpression
 

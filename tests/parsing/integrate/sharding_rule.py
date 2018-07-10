@@ -49,7 +49,7 @@ sharding_rule_config = {
                     }
                 },
                 'key_generator_column_name': 'order_id',
-                'key_generator': None,
+                'key_generator_class_name': 'shardingpy.keygen.base.DefaultKeyGenerator',
                 'logic_index': 'order_index'
             },
 
@@ -63,7 +63,7 @@ sharding_rule_config = {
                     }
                 },
                 'key_generator_column_name': 'order_id',
-                'key_generator': None,
+                'key_generator_class_name': 'shardingpy.keygen.base.DefaultKeyGenerator',
                 'logic_index': 'order_index'
             }
         },

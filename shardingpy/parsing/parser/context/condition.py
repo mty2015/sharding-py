@@ -120,3 +120,6 @@ class GeneratedKeyCondition(Condition):
         super().__init__(column, ShardingOperator.EQUAL, SQLNumberExpression(value))
         self.index = index
         self.value = value
+
+    def get_condition_values(self, parameters):
+        return [self.value] if self.value is not None else [parameters[self.index]]

@@ -23,7 +23,8 @@ sharding_rule_config = {
                         'algorithm_class_name': 'tests.api.algorithm.fixture.TestComplexKeysShardingAlgorithm'
                     }
                 },
-                'key_generator_column_name': 'item_id'
+                'key_generator_column_name': 'item_id',
+                'key_generator_class_name': 'shardingpy.keygen.base.DefaultKeyGenerator',
             },
             't_place': {
                 'actual_data_nodes': ['db0.t_place', 'db1.t_place'],

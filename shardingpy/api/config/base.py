@@ -45,14 +45,14 @@ def load_sharding_rule_config_from_dict(cfg):
     config.default_data_source_name = cfg.get('default_data_source_name')
 
     config.table_rule_configs = load_table_rule_configs(cfg.get('tables'))
-    config.binding_tables_groups = cfg.get('binding_tables')
+    config.binding_tables_groups = cfg.get('binding_tables', [])
 
     config.default_database_sharding_strategy_config = cfg.get('default_database_strategy')
     config.default_table_sharding_strategy_config = cfg.get('default_database_strategy')
 
     config.master_slave_rule_configs = load_master_slave_rule_config(cfg.get('master_slave_rules'))
 
-    config.default_key_generator = cfg['default_key_generator']
+    config.default_key_generator = cfg.get('default_key_generator')
     config.config_map = cfg.get('config_map')
     config.props = cfg.get('props')
     return config
@@ -67,10 +67,15 @@ def load_table_rule_configs(cfg):
         table_rule_config.database_strategy_config = load_strategy_config(_table_rule_config.get('database_strategy'))
         table_rule_config.table_strategy_config = load_strategy_config(_table_rule_config.get('table_strategy'))
         table_rule_config.key_generator_column_name = _table_rule_config.get('key_generator_column_name')
-        table_rule_config.key_generator = _table_rule_config.get('key_generator')
+        table_rule_config.key_generator = load_key_generator(_table_rule_config.get('key_generator_class_name'))
         table_rule_config.logic_index = _table_rule_config.get('logic_index')
         table_rule_configs.append(table_rule_config)
     return table_rule_configs
+
+
+def load_key_generator(key_generator_class_name):
+    if key_generator_class_name:
+        return load_class_for_name(key_generator_class_name)
 
 
 def load_strategy_config(cfg):
