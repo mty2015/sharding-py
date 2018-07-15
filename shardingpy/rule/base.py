@@ -54,6 +54,11 @@ class ShardingRule(object):
             if each.logic_table == logic_table_name.lower():
                 return each
 
+    def try_find_table_rule_by_actual_table(self, actual_table_name):
+        for each in self.table_rules:
+            if each.is_existed(actual_table_name):
+                return each
+
     def find_binding_table_rule(self, logic_table):
         for each in self.binding_table_rules:
             if each.has_logic_table(logic_table):
@@ -154,6 +159,23 @@ class BindingTableRule(object):
             if each.logic_table == logic_table.lower():
                 return True
         return False
+
+    def get_binding_actual_table(self, data_source, logic_table, other_actual_table):
+        index = -1
+        for each in self.table_rules:
+            index = each.find_actual_table_index(data_source, other_actual_table)
+            if index != -1:
+                break
+        if index == -1:
+            raise ShardingConfigurationException('Actual table [%s].[%s] is not in table config' % (data_source,
+                                                                                                    other_actual_table))
+        for each in self.table_rules:
+            if each.logic_table == logic_table.lower():
+                return each.actual_data_nodes[index].table_name.lower()
+
+        raise ShardingConfigurationException(
+            '"Cannot find binding actual table, data source: %s, logic table: %s, other actual table: %s' % (
+                data_source, logic_table, other_actual_table))
 
 
 class MasterSlaveRule(object):

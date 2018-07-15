@@ -39,8 +39,19 @@ class SelectStatement(SQLStatement):
             if strutil.equals_ignore_case(raw_name, each.alias):
                 return raw_name
 
+    def get_aggregation_select_items(self):
+        result = list()
+        for each in self.select_items:
+            if isinstance(each, AggregationSelectItem):
+                result.append(each)
+                result.extend(each.derived_aggregation_select_items)
+        return result
+
     def get_star_select_items(self):
         return [each for each in self.select_items if isinstance(each, StarSelectItem)]
+
+    def is_same_group_by_and_order_by_items(self):
+        return self.group_by_items and self.group_by_items == self.order_by_items
 
     def contains_sub_query(self):
         return self.sub_query_statement is not None

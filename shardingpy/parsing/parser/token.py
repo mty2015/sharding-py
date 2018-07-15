@@ -70,3 +70,18 @@ class InsertColumnToken(SQLToken):
     def __init__(self, begin_position, column_name):
         super().__init__(begin_position)
         self.column_name = column_name
+
+
+class SchemaToken(SQLToken):
+    def __init__(self, begin_position, original_literals, table_name):
+        super().__init__(begin_position)
+        self._original_literals = original_literals
+        self._table_name = table_name
+
+    @property
+    def original_literals(self):
+        return sqlutil.get_exactly_value(self._original_literals)
+
+    @property
+    def table_name(self):
+        return sqlutil.get_exactly_value(self._table_name)
