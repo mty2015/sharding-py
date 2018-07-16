@@ -18,8 +18,7 @@ class StringBuffer:
 
 class SQLBuilder:
     def __init__(self, parameters=None):
-        if parameters is None:
-            self.parameters = list()
+        self.parameters = parameters or list()
         self.segments = list()
         self.current_segment = StringBuffer()
         self.segments.append(self.current_segment)
@@ -58,7 +57,7 @@ class SQLBuilder:
                     result += ('_' + actual_table_name)
             elif isinstance(each, InsertValuesPlaceholder):
                 expressions = list()
-                for sharding_condition in each.sharding_conditions:
+                for sharding_condition in each.sharding_conditions.sharding_conditions:
                     self._process_insert_sharding_condition(table_unit, sharding_condition, expressions,
                                                             insert_parameters)
                 count = 0

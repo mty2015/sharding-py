@@ -22,6 +22,7 @@ class SQLRewriteEngine:
         if not self.sql_tokens:
             return result.append_literals(self.orignial_sql)
         count = 0
+        self._sort_by_begin_position(self.sql_tokens)
         for token in self.sql_tokens:
             if count == 0:
                 result.append_literals(self.orignial_sql[:token.begin_position])
@@ -45,6 +46,8 @@ class SQLRewriteEngine:
                 self._append_order_by_token(result, count, self.sql_tokens)
             elif isinstance(token, InsertColumnToken):
                 self._append_symbol_token(result, token, count, self.sql_tokens)
+            count += 1
+        return result
 
     def _append_table_placehodler(self, builder, table_token, count, sql_tokens):
         builder.append_placeholder(TablePlaceholder(table_token.table_name.lower()))
@@ -128,3 +131,6 @@ class SQLRewriteEngine:
                 result[table_name] = binding_table_rule.get_binding_actual_table(data_source_name, table_name,
                                                                                  routing_table.actual_table_name)
         return result
+
+    def _sort_by_begin_position(self, sql_tokens):
+        sql_tokens.sort(key=lambda token: token.begin_position)
