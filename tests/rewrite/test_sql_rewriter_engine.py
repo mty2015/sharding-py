@@ -1,11 +1,15 @@
 import unittest
 from shardingpy.api.config.base import load_sharding_rule_config_from_dict
-from shardingpy.constant import DatabaseType
+from shardingpy.constant import DatabaseType, OrderDirection
 from shardingpy.optimizer.condition import ShardingConditions
 from shardingpy.optimizer.insert_optimizer import InsertShardingCondition
+from shardingpy.parsing.parser.context.limit import Limit, LimitValue
+from shardingpy.parsing.parser.context.others import OrderItem
+from shardingpy.parsing.parser.context.table import Table
 from shardingpy.parsing.parser.sql.dml.insert import InsertStatement
 from shardingpy.parsing.parser.sql.dql.select import SelectStatement
-from shardingpy.parsing.parser.token import TableToken, ItemsToken, InsertValuesToken, InsertColumnToken
+from shardingpy.parsing.parser.token import TableToken, ItemsToken, InsertValuesToken, InsertColumnToken, OffsetToken, \
+    RowCountToken, OrderByToken
 from shardingpy.rewrite.rewrite_engine import SQLRewriteEngine
 from shardingpy.routing.types.base import TableUnit, RoutingTable
 from shardingpy.rule.base import ShardingRule, DataNode
@@ -168,3 +172,68 @@ class SQLRewriteEngineTest(unittest.TestCase):
                                           ShardingConditions([sharding_condition]), [])
         rewrite_sql = 'INSERT INTO table_1(name, id) VALUES (?, ?)'
         self.assertEqual(rewrite_engine.rewrite(True).to_sql(table_unit, self.table_tokens, None).sql, rewrite_sql)
+
+    def test_rewrite_for_limit(self):
+        self.select_statement.limit = Limit(DatabaseType.MySQL, LimitValue(2, -1, True), LimitValue(2, -1, True))
+        self.select_statement.sql_tokens.append(TableToken(17, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(OffsetToken(33, 2))
+        self.select_statement.sql_tokens.append(RowCountToken(36, 2))
+        sql = 'SELECT x.id FROM table_x x LIMIT 2, 2'
+        rewrite_engine = SQLRewriteEngine(self.sharding_rule, sql, DatabaseType.MySQL, self.select_statement,
+                                          None, [])
+        rewrite_sql = 'SELECT x.id FROM table_1 x LIMIT 0, 4'
+        self.assertEqual(rewrite_engine.rewrite(True).to_sql(None, self.table_tokens, None).sql, rewrite_sql)
+
+    def test_rewrite_for_limit_for_memory_group_by(self):
+        self.select_statement.limit = Limit(DatabaseType.MySQL, LimitValue(2, -1, True), LimitValue(2, -1, True))
+        self.select_statement.order_by_items.append(OrderItem('x', 'id', OrderDirection.ASC, OrderDirection.ASC, None))
+        self.select_statement.group_by_items.append(OrderItem('x', 'id', OrderDirection.DESC, OrderDirection.ASC, None))
+        self.select_statement.sql_tokens.append(TableToken(17, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(OffsetToken(33, 2))
+        self.select_statement.sql_tokens.append(RowCountToken(36, 2))
+        sql = 'SELECT x.id FROM table_x x LIMIT 2, 2'
+        rewrite_engine = SQLRewriteEngine(self.sharding_rule, sql, DatabaseType.MySQL, self.select_statement,
+                                          None, [])
+        rewrite_sql = 'SELECT x.id FROM table_1 x LIMIT 0, 2147483647'
+        self.assertEqual(rewrite_engine.rewrite(True).to_sql(None, self.table_tokens, None).sql, rewrite_sql)
+
+    def test_rewrite_for_limit_for_no_rewrite_limit(self):
+        self.select_statement.limit = Limit(DatabaseType.MySQL, LimitValue(2, -1, True), LimitValue(2, -1, True))
+        self.select_statement.sql_tokens.append(TableToken(17, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(OffsetToken(33, 2))
+        self.select_statement.sql_tokens.append(RowCountToken(36, 2))
+        sql = 'SELECT x.id FROM table_x x LIMIT 2, 2'
+        rewrite_engine = SQLRewriteEngine(self.sharding_rule, sql, DatabaseType.MySQL, self.select_statement,
+                                          None, [])
+        rewrite_sql = 'SELECT x.id FROM table_1 x LIMIT 2, 2'
+        self.assertEqual(rewrite_engine.rewrite(False).to_sql(None, self.table_tokens, None).sql, rewrite_sql)
+
+    def test_rewrite_for_derived_order_by(self):
+        self.select_statement.group_by_last_position = 61
+        self.select_statement.order_by_items.append(OrderItem('x', 'id', OrderDirection.ASC, OrderDirection.ASC, None))
+        self.select_statement.order_by_items.append(
+            OrderItem('x', 'name', OrderDirection.DESC, OrderDirection.ASC, None))
+        self.select_statement.sql_tokens.append(TableToken(25, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(OrderByToken(61))
+        sql = 'SELECT x.id, x.name FROM table_x x GROUP BY x.id, x.name DESC'
+        rewrite_engine = SQLRewriteEngine(self.sharding_rule, sql, DatabaseType.MySQL, self.select_statement,
+                                          None, [])
+        rewrite_sql = 'SELECT x.id, x.name FROM table_1 x GROUP BY x.id, x.name DESC ORDER BY id ASC,name DESC '
+        self.assertEqual(rewrite_engine.rewrite(False).to_sql(None, self.table_tokens, None).sql, rewrite_sql)
+
+    def test_generate_sql(self):
+        parameters = [1, 'x']
+        self.select_statement.sql_tokens.append(TableToken(7, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(TableToken(31, 0, 'table_x'))
+        self.select_statement.sql_tokens.append(TableToken(58, 0, 'table_x'))
+        self.select_statement.tables.add(Table('table_x', 'x'))
+        self.select_statement.tables.add(Table('table_y', 'y'))
+        sql = 'SELECT table_x.id, x.name FROM table_x x, table_y y WHERE table_x.id=? AND x.name=?'
+        rewrite_engine = SQLRewriteEngine(self.sharding_rule, sql, DatabaseType.MySQL, self.select_statement,
+                                          None, parameters)
+        rewrite_sql = 'SELECT table_x.id, x.name FROM table_x x, table_y y WHERE table_x.id=? AND x.name=?'
+        table_unit = TableUnit('db0')
+        table_unit.routing_tables.append(RoutingTable('table_x', 'table_x'))
+        self.assertEqual(rewrite_engine.generate_sql(table_unit, rewrite_engine.rewrite(True)).sql, rewrite_sql)
+
+

@@ -16,7 +16,7 @@ class Limit:
         self.row_count = row_count
 
     def get_offset_value(self):
-        return self.offset.vaue if self.offset else 0
+        return self.offset.value if self.offset else 0
 
     def is_need_rewrite_row_count(self):
         return self.database_type in [DatabaseType.MySQL, DatabaseType.H2]

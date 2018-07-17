@@ -268,7 +268,7 @@ class WhereClauseParser:
         if self.lexer_engine.skip_if_equal(DefaultKeyword.BETWEEN):
             return self._parse_between_condition(sharding_rule, sql_statement, left)
 
-        # row number condition
+        # TODO row number condition
 
         result = NullCondition();
         other_condition_operators = [Symbol.LT, Symbol.LT_EQ, Symbol.GT, Symbol.GT_EQ, Symbol.LT_GT, Symbol.BANG_EQ,

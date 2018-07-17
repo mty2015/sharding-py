@@ -77,7 +77,7 @@ class SQLRewriteEngine:
             builder.append_literals(0x7fffffff)
         else:
             builder.append_literals(
-                row_count_token.row_count + limit.get_offset_value if limit.is_need_rewrite_row_count() else row_count_token.row_count)
+                row_count_token.row_count + limit.get_offset_value() if limit.is_need_rewrite_row_count() else row_count_token.row_count)
         begin_position = row_count_token.begin_position + len(str(row_count_token.row_count))
         self._append_rest(builder, count, sql_tokens, begin_position)
 
@@ -92,7 +92,7 @@ class SQLRewriteEngine:
         for each in self.sql_statement.order_by_items:
             column_label = sqlutil.get_original_value(each.get_column_label(), self.database_type)
             if i == 0:
-                order_by_literals += ' {} {}'.format(column_label, each.order_direction.name)
+                order_by_literals += '{} {}'.format(column_label, each.order_direction.name)
             else:
                 order_by_literals += ',{} {}'.format(column_label, each.order_direction.name)
             i += 1
