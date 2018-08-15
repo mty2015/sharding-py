@@ -10,7 +10,7 @@ class RoutingTable:
 class TableUnit:
     def __init__(self, data_source_name):
         self.data_source_name = data_source_name
-        self.routing_tables = list()
+        self.routing_tables = list()  # RoutingTable
 
     def find_routing_table(self, data_source_name, actual_table_name):
         for each in self.routing_tables:

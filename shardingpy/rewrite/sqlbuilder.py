@@ -69,7 +69,7 @@ class SQLBuilder:
             else:
                 result += str(each)
         if not insert_parameters:
-            return SQLUnit(result, self.parameters)
+            return SQLUnit(result, [self.parameters])
         else:
             return SQLUnit(result, [insert_parameters])
 

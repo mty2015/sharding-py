@@ -92,7 +92,7 @@ sharding_rule_config = {
             'ds_1': {
                 'master_data_source_name': 'master_ds_1',
                 'slave_data_source_names': ['master_ds_1_slave_0', 'master_ds_1_slave_0'],
-                'load_balance_algorithm': None,
+                'load_balance_algorithm_class_name': None,
                 'config_map': {
                     'master-slave-key1': 'master-slave-key1'
                 }

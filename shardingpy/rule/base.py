@@ -1,4 +1,5 @@
-from shardingpy.api.config.base import TableRuleConfiguration
+from shardingpy.api.algorithm.masterslave.base import get_default_master_slave_load_balance_algorithm
+from shardingpy.api.config.base import TableRuleConfiguration, MasterSlaveRuleConfiguration
 from shardingpy.parsing.parser.context.condition import Column
 from shardingpy.routing.strategy.base import NoneShardingStrategy
 from shardingpy.keygen.base import DefaultKeyGenerator
@@ -179,8 +180,13 @@ class BindingTableRule(object):
 
 
 class MasterSlaveRule(object):
-    def __init__(self):
-        pass
+    def __init__(self, master_slave_config):
+        assert isinstance(master_slave_config, MasterSlaveRuleConfiguration)
+        self.name = master_slave_config.name
+        self.master_data_source_name = master_slave_config.master_data_source_name
+        self.slave_data_source_names = master_slave_config.slave_data_source_names
+        self.load_balance_algorithm = master_slave_config.load_balance_algorithm if master_slave_config.load_balance_algorithm \
+            else get_default_master_slave_load_balance_algorithm()
 
 
 class DataNode(object):

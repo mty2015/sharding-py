@@ -1,3 +1,5 @@
+from shardingpy.api.algorithm.masterslave.base import MasterSlaveLoadBalanceAlgorithmType, \
+    get_master_slave_load_balance_algorithm_by_type
 from shardingpy.util.reflectionutil import load_class_for_name
 
 
@@ -100,6 +102,15 @@ def load_master_slave_rule_config(cfg):
         master_slave_rule_config.name = name
         master_slave_rule_config.master_data_source_name = ms['master_data_source_name']
         master_slave_rule_config.slave_data_source_names = ms['slave_data_source_names']
-        master_slave_rule_config.load_balance_algorithm = ms['load_balance_algorithm']
+
+        load_balance_algorithm = None
+        load_balance_algorithm_class_name = ms.get('load_balance_algorithm_class_name')
+        if load_balance_algorithm_class_name:
+            load_balance_algorithm = load_class_for_name(load_balance_algorithm_class_name)
+        elif ms.get('load_balance_algorithm_type'):
+            load_balance_algorithm_type = MasterSlaveLoadBalanceAlgorithmType(ms.get('load_balance_algorithm_type'))
+            load_balance_algorithm = get_master_slave_load_balance_algorithm_by_type(load_balance_algorithm_type)
+        master_slave_rule_config.load_balance_algorithm = load_balance_algorithm
+
         result.append(master_slave_rule_config)
     return result
