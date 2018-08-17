@@ -87,6 +87,15 @@ class ShardingRule(object):
             if strutil.equals_ignore_case(logic_table_name, each.logic_table) and each.generate_key_column:
                 return Column(each.generate_key_column, logic_table_name)
 
+    def generate_key(self, logic_table_name):
+        table_rule = self.try_find_table_rule_by_logic_table(logic_table_name)
+        if not table_rule:
+            raise ShardingConfigurationException('Cannot find strategy for generate keys.')
+        if table_rule.key_generator:
+            return table_rule.key_generator.generate_key()
+        return self.default_key_generator.generate_key()
+
+
 
 class ShardingDatasourceNames(object):
     def __init__(self, sharding_rule_configuration, raw_data_source_names):
