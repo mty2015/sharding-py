@@ -1,5 +1,5 @@
-from shardingpy.api.algorithm.masterslave.base import MasterSlaveLoadBalanceAlgorithmType, \
-    get_master_slave_load_balance_algorithm_by_type
+from shardingpy.api.algorithm.masterslave.base import MasterSlaveLoadBalanceAlgorithmType
+from shardingpy.api.algorithm.masterslave.factory import get_master_slave_load_balance_algorithm_by_type
 from shardingpy.util.reflectionutil import load_class_for_name
 
 

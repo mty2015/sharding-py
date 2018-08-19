@@ -1,4 +1,4 @@
-from shardingpy.api.algorithm.masterslave.base import get_default_master_slave_load_balance_algorithm
+from shardingpy.api.algorithm.masterslave.factory import get_default_master_slave_load_balance_algorithm
 from shardingpy.api.config.base import TableRuleConfiguration, MasterSlaveRuleConfiguration
 from shardingpy.parsing.parser.context.condition import Column
 from shardingpy.routing.strategy.base import NoneShardingStrategy
@@ -65,6 +65,14 @@ class ShardingRule(object):
             if each.has_logic_table(logic_table):
                 return each
 
+    def get_logic_table_name(self, logic_index_name):
+        for each in self.table_rules:
+            if each.logic_index == logic_index_name:
+                return each.logic_table
+
+        raise ShardingConfigurationException(
+            'Cannot find logic table name with logic index name: {}'.format(logic_index_name))
+
     def is_sharding_column(self, column):
         if column.name in self.default_database_sharding_strategy.get_sharding_columns() or \
                 column.name in self.default_table_sharding_strategy.get_sharding_columns():
@@ -94,7 +102,6 @@ class ShardingRule(object):
         if table_rule.key_generator:
             return table_rule.key_generator.generate_key()
         return self.default_key_generator.generate_key()
-
 
 
 class ShardingDatasourceNames(object):

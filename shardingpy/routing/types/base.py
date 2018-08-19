@@ -27,3 +27,16 @@ class TableUnit:
     def get_logic_table_names(self, data_source_name):
         return [each.logic_table_name for each in self.routing_tables if
                 strutil.equals_ignore_case(self.data_source_name, data_source_name)]
+
+
+class TableUnits:
+    def __init__(self):
+        self.table_units = list()
+
+
+class RoutingResult:
+    def __init__(self):
+        self.table_units = TableUnits()
+
+    def is_single_routing(self):
+        return len(self.table_units.table_units) == 1
