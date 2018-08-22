@@ -6,6 +6,14 @@ class RoutingTable:
         self.logic_table_name = logic_table_name
         self.actual_table_name = actual_table_name
 
+    def __eq__(self, other):
+        if not isinstance(other, RoutingTable):
+            return False
+        return self.logic_table_name == other.logic_table_name and self.actual_table_name == other.actual_table_name
+
+    def __hash__(self):
+        return hash(self.logic_table_name) + 17 * hash(self.actual_table_name)
+
 
 class TableUnit:
     def __init__(self, data_source_name):

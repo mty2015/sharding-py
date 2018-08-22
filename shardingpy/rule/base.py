@@ -6,6 +6,7 @@ from shardingpy.keygen.base import DefaultKeyGenerator
 from shardingpy.util import strutil
 from shardingpy.exception import ShardingConfigurationException
 from shardingpy.routing.strategy.factory import get_sharding_strategy
+from shardingpy.util.types import OrderedSet
 
 
 class ShardingRule(object):
@@ -50,6 +51,14 @@ class ShardingRule(object):
         return TableRule(table_rule_config, ShardingDatasourceNames(self.sharding_rule_configuration, [
             self.sharding_data_source_names.get_default_data_source_name()]))
 
+    def get_database_sharding_strategy(self, table_rule):
+        return table_rule.database_sharding_strategy if table_rule.database_sharding_strategy else \
+            self.default_database_sharding_strategy
+
+    def get_table_sharding_strategy(self, table_rule):
+        return table_rule.t if table_rule.table_sharding_strategy else \
+            self.default_table_sharding_strategy
+
     def try_find_table_rule_by_logic_table(self, logic_table_name):
         for each in self.table_rules:
             if each.logic_table == logic_table_name.lower():
@@ -60,10 +69,47 @@ class ShardingRule(object):
             if each.is_existed(actual_table_name):
                 return each
 
+    def is_all_binding_tables(self, logic_tables):
+        if not logic_tables:
+            return False
+        binding_table_rule = self._find_binding_table_rule_by_logic_tables(logic_tables)
+        if not binding_table_rule:
+            return False
+        return set(binding_table_rule.get_all_logic_tables()) == set(logic_tables)
+
     def find_binding_table_rule(self, logic_table):
         for each in self.binding_table_rules:
             if each.has_logic_table(logic_table):
                 return each
+
+    def _find_binding_table_rule_by_logic_tables(self, logic_tables):
+        for each in logic_tables:
+            result = self.find_binding_table_rule(each)
+            if result:
+                return result
+
+    def is_all_in_default_data_source(self, logic_tables):
+        for each in logic_tables:
+            if self.try_find_table_rule_by_logic_table(each):
+                return False
+        return logic_tables
+
+    def find_data_node_by_logic_table_name(self, logic_table_name):
+        return self.find_data_node(None, logic_table_name)
+
+    def find_data_node(self, data_source_name, logic_table_name):
+        table_rule = self.get_table_rule(logic_table_name)
+        for each in table_rule.actual_data_nodes:
+            if each.data_source_name in self.sharding_data_source_names.data_source_names and (
+                    not data_source_name or data_source_name == each.data_source_name):
+                return each
+        if not data_source_name:
+            raise ShardingConfigurationException(
+                'Cannot find actual data node for logic table name: {}'.format(logic_table_name))
+        else:
+            raise ShardingConfigurationException(
+                'Cannot find actual data node for data source name: {} and logic table name: {}'.format(
+                    data_source_name, logic_table_name))
 
     def get_logic_table_name(self, logic_index_name):
         for each in self.table_rules:
@@ -82,7 +128,7 @@ class ShardingRule(object):
             if not strutil.equals_ignore_case(column.table_name, table_rule.logic_table):
                 continue
 
-            if table_rule.data_base_sharding_strategy and column.name in table_rule.data_base_sharding_strategy.get_sharding_columns():
+            if table_rule.database_sharding_strategy and column.name in table_rule.database_sharding_strategy.get_sharding_columns():
                 return True
 
             if table_rule.table_sharding_strategy and column.name in table_rule.table_sharding_strategy.get_sharding_columns():
@@ -129,7 +175,7 @@ class TableRule(object):
         self.table_rule_configuration = table_rule_configuration
         self.actual_data_nodes = self._generate_data_nodes(table_rule_configuration.actual_data_nodes,
                                                            sharding_datasource_names.data_source_names)
-        self.data_base_sharding_strategy = get_sharding_strategy(
+        self.database_sharding_strategy = get_sharding_strategy(
             table_rule_configuration.database_strategy_config) if table_rule_configuration.database_strategy_config else None
         self.table_sharding_strategy = get_sharding_strategy(
             table_rule_configuration.table_strategy_config) if table_rule_configuration.table_strategy_config else None
@@ -149,10 +195,11 @@ class TableRule(object):
         return result
 
     def get_actual_data_source_names(self):
-        return [each.data_source_name for each in self.actual_data_nodes]
+        return list(OrderedSet([each.data_source_name for each in self.actual_data_nodes]))
 
-    def get_actual_table_names(self):
-        return [each.table_name for each in self.actual_data_nodes]
+    def get_actual_table_names(self, target_data_source):
+        return list(OrderedSet(
+            [each.table_name for each in self.actual_data_nodes if each.data_source_name == target_data_source]))
 
     def find_actual_table_index(self, data_source_name, table_name):
         result = 0
@@ -194,6 +241,9 @@ class BindingTableRule(object):
             '"Cannot find binding actual table, data source: %s, logic table: %s, other actual table: %s' % (
                 data_source, logic_table, other_actual_table))
 
+    def get_all_logic_tables(self):
+        return [i.logic_table.lower() for i in self.table_rules]
+
 
 class MasterSlaveRule(object):
     def __init__(self, master_slave_config):
@@ -208,7 +258,19 @@ class MasterSlaveRule(object):
 class DataNode(object):
     DELIMITER = '.'
 
-    def __init__(self, data_node):
-        if not (self.DELIMITER in data_node and len(data_node.split(self.DELIMITER)) == 2):
-            raise ShardingConfigurationException('Invalid format for actual data nodes: "{}"'.format(data_node))
-        self.data_source_name, self.table_name = data_node.split(self.DELIMITER)
+    def __init__(self, *args):
+        if len(args) == 1:
+            data_node = args[0]
+            if not (self.DELIMITER in data_node and len(data_node.split(self.DELIMITER)) == 2):
+                raise ShardingConfigurationException('Invalid format for actual data nodes: "{}"'.format(data_node))
+            self.data_source_name, self.table_name = data_node.split(self.DELIMITER)
+        else:
+            self.data_source_name, self.table_name = args[0], args[1]
+
+    def __eq__(self, other):
+        if not isinstance(other, DataNode):
+            return False
+        return self.data_source_name == other.data_source_name and self.table_name == other.table_name
+
+    def __hash__(self):
+        return hash(self.data_source_name) + 17 * hash(self.table_name)
